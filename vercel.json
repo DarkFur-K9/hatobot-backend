@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "admin/dist",
+  "env": {
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_KEY": "@supabase_key",
+    "ACCESS_TOKEN": "@whatsapp_access_token",
+    "PHONE_NUMBER_ID": "@whatsapp_phone_number_id",
+    "VERIFY_TOKEN": "@whatsapp_verify_token",
+    "ADMIN_SECRET": "@admin_secret"
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/webhook",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/notify/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/health",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "admin/dist/index.html"
+    }
+  ]
+}

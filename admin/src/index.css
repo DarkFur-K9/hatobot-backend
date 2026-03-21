@@ -1,0 +1,15 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a202c; }
+:root {
+  --primary: #1a56db;
+  --primary-dark: #1e429f;
+  --success: #0e9f6e;
+  --danger: #f05252;
+  --warning: #c27803;
+  --sidebar-bg: #1e2a3a;
+  --sidebar-text: #cbd5e0;
+  --sidebar-active: #1a56db;
+  --card-bg: #ffffff;
+  --border: #e2e8f0;
+  --text-muted: #718096;
+}

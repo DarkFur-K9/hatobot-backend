@@ -1,0 +1,18 @@
+{
+  "name": "hatobot",
+  "version": "5.0.0",
+  "description": "HatoBot - JPR College WhatsApp Attendance Bot",
+  "type": "module",
+  "scripts": {
+    "dev": "cd admin && npm run dev",
+    "build": "cd admin && npm run build",
+    "preview": "cd admin && npm run preview"
+  },
+  "keywords": ["whatsapp", "bot", "attendance", "college"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": "20.x",
+    "python": "3.11.x"
+  }
+}

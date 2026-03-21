@@ -1,0 +1,137 @@
+# ⚡ EXACT TERMINAL COMMANDS FOR DEPLOYMENT
+
+## STEP 1: INITIALIZE GIT & PUSH to GitHub
+# Run these in PowerShell from your project root (hatobot_v5/hatobot/)
+
+git config --global user.email "your-email@gmail.com"
+git config --global user.name "Your Name"
+
+git init
+git add .
+git commit -m "🚀 HatoBot v5 - Ready for Vercel deployment with FastAPI backend + React admin"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/hatobot.git
+git push -u origin main
+
+# ✅ On first push, GitHub will ask for authentication token
+# Create one at: https://github.com/settings/tokens (classic token, repo scope)
+# Then paste when prompted
+
+---
+
+## STEP 2: INSTALL VERCEL CLI & SET UP
+npm install -g vercel
+
+# ✅ First time setup (links your Vercel account)
+vercel login
+
+---
+
+## STEP 3: DEPLOY TO VERCEL (PRODUCTION)
+# From your project root: hatobot_v5/hatobot/
+
+vercel --prod
+
+# ✅ When prompted:
+# - Set project name: hatobot
+# - Select existing project (if available) or create new
+# - Framework: Other
+# - Root directory: .
+# - DO NOT modify build/output settings (vercel.json handles it)
+
+---
+
+## STEP 4: SET ENVIRONMENT VARIABLES IN VERCEL
+
+# After deployment completes, go to: https://vercel.com/dashboard
+# Select your "hatobot" project > Settings > Environment Variables
+
+# Add these variables:
+
+SUPABASE_URL = https://nhhkjwzxqeovyzcimmdf.supabase.co
+SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oaGtqd3p4cWVvdnl6Y2ltbWRmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzc0OTMwMiwiZXhwIjoyMDg5MzI1MzAyfQ.we2zjbMa6ggdtt7Ur6vDEn_0h9EQ9CU96hnMKjT_l2c
+
+ACCESS_TOKEN = [GET FROM FACEBOOK DEVELOPERS]
+PHONE_NUMBER_ID = [GET FROM FACEBOOK DEVELOPERS]
+VERIFY_TOKEN = hatobot-verify-token-2024
+
+ADMIN_SECRET = hatobot_admin_secret
+
+# 💡 For each variable:
+# 1. Enter the name in the "Name" field
+# 2. Enter the value in the "Value" field
+# 3. Click "Add"
+# 4. Click "Save" at the bottom
+
+---
+
+## STEP 5: CONFIGURE WHATSAPP WEBHOOK
+
+# Go to: https://developers.facebook.com/apps
+# Select your WhatsApp Business App > WhatsApp > Configuration
+
+# Set Webhook URL: https://YOUR-VERCEL-URL.vercel.app/webhook
+# Set Verify Token: hatobot-verify-token-2024
+
+# ✅ Your Vercel URL will be shown after deployment (e.g., https://hatobot-xyz.vercel.app)
+# ✅ Test webhook by clicking "Test"
+
+---
+
+## STEP 6: VERIFY DEPLOYMENT
+
+# Test all endpoints with curl:
+
+# 1. Health check
+curl https://YOUR-VERCEL-URL.vercel.app/health
+
+# 2. Admin panel (should load React page)
+curl https://YOUR-VERCEL-URL.vercel.app/
+
+# 3. Webhook verification (GET)
+curl "https://YOUR-VERCEL-URL.vercel.app/webhook?hub.mode=subscribe&hub.verify_token=hatobot-verify-token-2024&hub.challenge=test_challenge_123"
+
+---
+
+## QUICK REFERENCE - ENVIRONMENT VARIABLES
+
+SUPABASE_URL=https://nhhkjwzxqeovyzcimmdf.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oaGtqd3p4cWVvdnl6Y2ltbWRmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzc0OTMwMiwiZXhwIjoyMDg5MzI1MzAyfQ.we2zjbMa6ggdtt7Ur6vDEn_0h9EQ9CU96hnMKjT_l2c
+ACCESS_TOKEN=[Ask user to provide]
+PHONE_NUMBER_ID=[Ask user to provide]
+VERIFY_TOKEN=hatobot-verify-token-2024
+ADMIN_SECRET=hatobot_admin_secret
+
+---
+
+## TROUBLESHOOTING
+
+❌ Build fails:
+-> Check admin/package.json scripts (dev, build, preview)
+-> Ensure Vite is configured correctly
+-> Run: npm install && npm run build (in admin folder)
+
+❌ Python errors:
+-> Verify api/requirements.txt has all dependencies
+-> Check api/index.py for syntax errors
+-> Ensure FastAPI exports 'app' variable
+
+❌ Webhook not working:
+-> Verify VERIFY_TOKEN matches between Vercel env and Facebook config
+-> Check vercel.json routing rules
+
+❌ 404 on frontend routes:
+-> Ensure vercel.json has SPA fallback: "src": "/(.*)", "dest": "admin/dist/index.html"
+
+❌ CORS errors:
+-> Already handled in api/index.py (CORSMiddleware with allow_origins=["*"])
+
+---
+
+## NEXT STEPS AFTER DEPLOYMENT
+
+1. ✅ Test WhatsApp messages → bot should respond
+2. ✅ Login to admin panel: jpr-college / jpr-college-password
+3. ✅ View students, teachers, attendance in admin
+4. ✅ Monitor logs: https://vercel.com/dashboard > hatobot > Logs
+5. ✅ Setup Google Apps Script to call /notify/* endpoints
