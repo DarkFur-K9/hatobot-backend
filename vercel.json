@@ -28,8 +28,19 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/admin/dist/assets/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/index.html",
+      "dest": "/admin/dist/index.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "admin/dist/index.html"
+      "dest": "/admin/dist/index.html"
     }
   ]
 }
