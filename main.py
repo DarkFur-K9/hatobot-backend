@@ -11,7 +11,7 @@ load_dotenv()
 
 app = FastAPI(title="HatoBot - WhatsApp Bot")
 
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN") or os.getenv("ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 ADMIN_NUMBER = os.getenv("ADMIN_NUMBER", "6369189024")
