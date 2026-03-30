@@ -3,7 +3,7 @@ import json
 import httpx
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,7 +14,7 @@ WHATSAPP_TOKEN  = os.getenv("WHATSAPP_TOKEN") or os.getenv("ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 VERIFY_TOKEN    = os.getenv("VERIFY_TOKEN")
 ADMIN_NUMBER    = os.getenv("ADMIN_NUMBER", "6369189024")
-CART_BASE_URL   = os.getenv("CART_BASE_URL", "https://your-app.vercel.app")  # Set in .env
+CART_BASE_URL   = os.getenv("CART_BASE_URL", "https://landingpagebackend-opal.vercel.app")
 API_URL         = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
 
 # ─── In-memory session store ───
@@ -988,6 +988,13 @@ async def receive_webhook(request: Request):
         print(f"[WEBHOOK PARSE ERROR] {e}")
 
     return JSONResponse({"status": "ok"})
+
+
+@app.get("/cart")
+async def serve_cart():
+    """Serve the HTML menu cart page for WhatsApp webview."""
+    cart_path = os.path.join(os.path.dirname(__file__), "cart.html")
+    return FileResponse(cart_path, media_type="text/html")
 
 
 @app.get("/health")
