@@ -346,7 +346,10 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             await send_buttons(
                 phone,
                 "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu and place your order.",
-                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+                [
+                    {"id": "hotel_view_menu",   "title": "👉 View Menu"},
+                    {"id": "hotel_bulk_order",  "title": "📦 Bulk Order"},
+                ]
             )
             return
         if raw == "turf_demo":
@@ -372,8 +375,11 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             session["cart"] = {}
             await send_buttons(
                 phone,
-                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu:",
-                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu and place your order.",
+                [
+                    {"id": "hotel_view_menu",  "title": "👉 View Menu"},
+                    {"id": "hotel_bulk_order", "title": "📦 Bulk Order"},
+                ]
             )
         elif hint == "turf":
             session["state"] = "turf_date"
@@ -410,7 +416,10 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             await send_buttons(
                 phone,
                 "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu and place your order.",
-                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+                [
+                    {"id": "hotel_view_menu",  "title": "👉 View Menu"},
+                    {"id": "hotel_bulk_order", "title": "📦 Bulk Order"},
+                ]
             )
         elif raw == "turf_demo":
             session["state"] = "turf_date"
@@ -435,11 +444,10 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     # HOTEL FLOW
     # ════════════════════════════════════════
 
-    # HOTEL: Welcome — show View Menu button
+    # HOTEL: Welcome — show View Menu + Bulk Order buttons
     if state == "hotel_welcome":
         if raw == "hotel_view_menu":
             session["state"] = "hotel_menu"
-            # Send webview cart link
             cart_url = f"{CART_BASE_URL}/cart?phone={phone}"
             await send_cta_url(
                 phone,
@@ -447,18 +455,25 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 "🛒 Open Menu",
                 cart_url
             )
-            # Also show WhatsApp list as fallback
-            await send_list(
+        elif raw == "hotel_bulk_order":
+            await send_text(
                 phone,
-                "Or select from the list below to add items one by one:",
-                "📋 View Menu",
-                build_menu_sections()
+                "📦 *Bulk Order — Chennai Hotel*\n\n"
+                "For bulk orders, catering, or large group orders, please contact us directly:\n\n"
+                "📞 *Phone/WhatsApp:* +91 98848 99024\n"
+                "🕐 *Hours:* 8:00 AM – 10:00 PM\n\n"
+                "Our team will get back to you within minutes! 🙏"
             )
+            reset_session(phone)
+            await send_return_cta(phone)
         else:
             await send_buttons(
                 phone,
-                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu:",
-                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu and place your order.",
+                [
+                    {"id": "hotel_view_menu",  "title": "👉 View Menu"},
+                    {"id": "hotel_bulk_order", "title": "📦 Bulk Order"},
+                ]
             )
         return
 
