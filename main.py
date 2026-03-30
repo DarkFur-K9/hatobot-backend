@@ -8,34 +8,34 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="HatoBot - WhatsApp Bot")
+app = FastAPI(title="HatoBot - WhatsApp Automation Demo")
 
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN") or os.getenv("ACCESS_TOKEN")
+WHATSAPP_TOKEN  = os.getenv("WHATSAPP_TOKEN") or os.getenv("ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
-ADMIN_NUMBER = os.getenv("ADMIN_NUMBER", "6369189024")
-API_URL = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
+VERIFY_TOKEN    = os.getenv("VERIFY_TOKEN")
+ADMIN_NUMBER    = os.getenv("ADMIN_NUMBER", "6369189024")
+CART_BASE_URL   = os.getenv("CART_BASE_URL", "https://your-app.vercel.app")  # Set in .env
+API_URL         = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
 
 # ─── In-memory session store ───
 sessions: dict = {}
 
-# ─── Menu (10 featured items, fits in one WhatsApp list) ───
+# ─── Menu Items ───
 MENU_ITEMS = [
-    {"id": "1",  "name": "Idli (2 pcs)",           "price": 40,  "cat": "🌅 Breakfast"},
-    {"id": "2",  "name": "Masala Dosa",             "price": 70,  "cat": "🌅 Breakfast"},
-    {"id": "3",  "name": "Pongal",                  "price": 60,  "cat": "🌅 Breakfast"},
-    {"id": "4",  "name": "Chettinad Chicken",       "price": 220, "cat": "🍛 Main Course"},
-    {"id": "5",  "name": "Mutton Kuzhambu",         "price": 280, "cat": "🍛 Main Course"},
-    {"id": "6",  "name": "Fish Curry",              "price": 200, "cat": "🍛 Main Course"},
-    {"id": "7",  "name": "Chicken Biryani",         "price": 180, "cat": "🍛 Main Course"},
-    {"id": "8",  "name": "Veg Biryani",             "price": 130, "cat": "🍛 Main Course"},
-    {"id": "9",  "name": "Kothu Parotta",           "price": 120, "cat": "🫓 Snacks"},
-    {"id": "10", "name": "Filter Coffee",           "price": 30,  "cat": "☕ Beverages"},
+    {"id": "1",  "name": "Idli (2 pcs)",       "price": 40,  "cat": "🌅 Breakfast"},
+    {"id": "2",  "name": "Masala Dosa",         "price": 70,  "cat": "🌅 Breakfast"},
+    {"id": "3",  "name": "Pongal",              "price": 60,  "cat": "🌅 Breakfast"},
+    {"id": "4",  "name": "Chettinad Chicken",   "price": 220, "cat": "🍛 Main Course"},
+    {"id": "5",  "name": "Mutton Kuzhambu",     "price": 280, "cat": "🍛 Main Course"},
+    {"id": "6",  "name": "Fish Curry",          "price": 200, "cat": "🍛 Main Course"},
+    {"id": "7",  "name": "Chicken Biryani",     "price": 180, "cat": "🍛 Main Course"},
+    {"id": "8",  "name": "Veg Biryani",         "price": 130, "cat": "🍛 Main Course"},
+    {"id": "9",  "name": "Kothu Parotta",       "price": 120, "cat": "🫓 Snacks"},
+    {"id": "10", "name": "Filter Coffee",       "price": 30,  "cat": "☕ Beverages"},
 ]
-
 MENU_ITEM_MAP = {item["id"]: item for item in MENU_ITEMS}
 
-# ─── Turf slots (10 max for WhatsApp list) ───
+# ─── Turf Slots ───
 TURF_SLOTS = [
     "06:00 AM - 07:00 AM",
     "07:00 AM - 08:00 AM",
@@ -48,22 +48,38 @@ TURF_SLOTS = [
     "08:00 PM - 09:00 PM",
     "09:00 PM - 10:00 PM",
 ]
+TURF_PRICE_PER_SLOT = 500  # ₹
 
-TURF_PRICE = 500  # ₹ per slot
 
-
-# ─── Session helpers ───
+# ════════════════════════════════════════
+# SESSION HELPERS
+# ════════════════════════════════════════
 
 def get_session(phone: str) -> dict:
     if phone not in sessions:
-        sessions[phone] = {"state": "init", "cart": {}, "data": {}}
+        sessions[phone] = {
+            "state": "init",
+            "cart": {},           # {item_id: qty}
+            "turf_slots": [],     # list of booked slot strings
+            "data": {},
+            "last_seen": datetime.utcnow(),
+        }
+    sessions[phone]["last_seen"] = datetime.utcnow()
     return sessions[phone]
 
 def reset_session(phone: str):
-    sessions[phone] = {"state": "init", "cart": {}, "data": {}}
+    sessions[phone] = {
+        "state": "init",
+        "cart": {},
+        "turf_slots": [],
+        "data": {},
+        "last_seen": datetime.utcnow(),
+    }
 
 
-# ─── WhatsApp API helpers ───
+# ════════════════════════════════════════
+# WHATSAPP API HELPERS
+# ════════════════════════════════════════
 
 async def send_text(to: str, body: str):
     await _post({
@@ -74,7 +90,7 @@ async def send_text(to: str, body: str):
     })
 
 async def send_buttons(to: str, body: str, buttons: list):
-    """Max 3 buttons. Each button: {"id": "...", "title": "..."}"""
+    """Max 3 buttons. Each: {"id": "...", "title": "..."}"""
     await _post({
         "messaging_product": "whatsapp",
         "to": to,
@@ -107,6 +123,25 @@ async def send_list(to: str, body: str, button_label: str, sections: list):
         }
     })
 
+async def send_cta_url(to: str, body: str, button_text: str, url: str):
+    """Send a CTA URL button (opens webview)."""
+    await _post({
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "cta_url",
+            "body": {"text": body},
+            "action": {
+                "name": "cta_url",
+                "parameters": {
+                    "display_text": button_text,
+                    "url": url
+                }
+            }
+        }
+    })
+
 async def _post(payload: dict):
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -119,21 +154,16 @@ async def _post(payload: dict):
         return resp
 
 
-# ─── Helper builders ───
+# ════════════════════════════════════════
+# BUILDER HELPERS
+# ════════════════════════════════════════
 
 def get_next_7_days() -> list:
-    """Returns next 7 days as list rows for WhatsApp list message."""
-    # IST = UTC+5:30
-    now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    now = datetime.utcnow() + timedelta(hours=5, minutes=30)  # IST
     rows = []
     for i in range(7):
         d = now + timedelta(days=i)
-        if i == 0:
-            label = "Today"
-        elif i == 1:
-            label = "Tomorrow"
-        else:
-            label = d.strftime("%A")  # Weekday name
+        label = "Today" if i == 0 else ("Tomorrow" if i == 1 else d.strftime("%A"))
         date_str = d.strftime("%d %b %Y")
         rows.append({
             "id": f"date_{d.strftime('%Y-%m-%d')}",
@@ -143,25 +173,34 @@ def get_next_7_days() -> list:
     return rows
 
 def build_menu_sections() -> list:
-    """Build menu as WhatsApp list sections (max 10 rows total)."""
     from collections import defaultdict
     cats = defaultdict(list)
     for item in MENU_ITEMS:
         cats[item["cat"]].append(item)
-    sections = []
-    for cat, items in cats.items():
-        sections.append({
+    return [
+        {
             "title": cat,
             "rows": [
-                {
-                    "id": f"menu_{item['id']}",
-                    "title": item["name"][:24],
-                    "description": f"₹{item['price']}"
-                }
+                {"id": f"menu_{item['id']}", "title": item["name"][:24], "description": f"₹{item['price']}"}
                 for item in items
             ]
-        })
-    return sections
+        }
+        for cat, items in cats.items()
+    ]
+
+def build_slot_sections(date_label: str) -> list:
+    morning = [s for s in TURF_SLOTS if "AM" in s]
+    evening = [s for s in TURF_SLOTS if "PM" in s]
+    return [
+        {
+            "title": "🌅 Morning Slots",
+            "rows": [{"id": f"slot_{i}", "title": s, "description": f"₹{TURF_PRICE_PER_SLOT} • {date_label}"} for i, s in enumerate(morning)]
+        },
+        {
+            "title": "🌆 Evening Slots",
+            "rows": [{"id": f"slot_{i+len(morning)}", "title": s, "description": f"₹{TURF_PRICE_PER_SLOT} • {date_label}"} for i, s in enumerate(evening)]
+        }
+    ]
 
 def build_cart_text(cart: dict) -> str:
     if not cart:
@@ -178,49 +217,69 @@ def build_cart_text(cart: dict) -> str:
     return "\n".join(lines)
 
 def cart_total(cart: dict) -> int:
+    return sum(
+        MENU_ITEM_MAP[item_id]["price"] * qty
+        for item_id, qty in cart.items()
+        if item_id in MENU_ITEM_MAP
+    )
+
+def build_order_summary(cart: dict) -> str:
+    lines = ["📋 *Order Summary:*\n"]
     total = 0
     for item_id, qty in cart.items():
         item = MENU_ITEM_MAP.get(item_id)
         if item:
-            total += item["price"] * qty
-    return total
+            subtotal = item["price"] * qty
+            total += subtotal
+            lines.append(f"{item['name']} x{qty}")
+    lines.append(f"\n💰 Total: ₹{total}")
+    return "\n".join(lines)
 
-def build_slot_sections(date_label: str) -> list:
-    morning = [s for s in TURF_SLOTS if "AM" in s]
-    evening = [s for s in TURF_SLOTS if "PM" in s]
-    return [
-        {
-            "title": "🌅 Morning Slots",
-            "rows": [
-                {"id": f"slot_{i}", "title": s, "description": f"₹{TURF_PRICE} • {date_label}"}
-                for i, s in enumerate(morning)
-            ]
-        },
-        {
-            "title": "🌆 Evening Slots",
-            "rows": [
-                {"id": f"slot_{i+len(morning)}", "title": s, "description": f"₹{TURF_PRICE} • {date_label}"}
-                for i, s in enumerate(evening)
-            ]
-        }
-    ]
+def build_turf_summary(slots: list, date_label: str) -> str:
+    total = TURF_PRICE_PER_SLOT * len(slots)
+    lines = [f"⚽ *Booking Summary*\n"]
+    lines.append(f"📅 Date: {date_label}")
+    for i, s in enumerate(slots, 1):
+        lines.append(f"⏰ Slot {i}: {s}")
+    lines.append(f"\n💰 Slots Total: ₹{total}")
+    lines.append(f"🎁 Discount: ₹{total}")
+    lines.append(f"✅ *Final Price: ₹0 (Demo Offer 🎉)*")
+    return "\n".join(lines)
 
 
-# ─── Admin Notification ───
+# ════════════════════════════════════════
+# AI ASSISTANT (keyword matching + fallback)
+# ════════════════════════════════════════
 
-async def notify_demo_complete(phone: str, demo: str):
-    """Notify admin when a user completes a demo."""
+def ai_assist(text: str) -> str | None:
+    """Simple keyword matcher. Returns a routing hint or None."""
+    t = text.lower()
+    if any(k in t for k in ["menu", "food", "order", "eat", "hotel", "restaurant"]):
+        return "hotel"
+    if any(k in t for k in ["book", "turf", "slot", "field", "sport", "play"]):
+        return "turf"
+    if any(k in t for k in ["start", "help", "info", "price", "demo", "bot", "hatobot"]):
+        return "help"
+    if any(k in t for k in ["hi", "hello", "hey", "good morning", "good evening", "namaste"]):
+        return "greet"
+    return None
+
+
+# ════════════════════════════════════════
+# ADMIN NOTIFICATIONS
+# ════════════════════════════════════════
+
+async def notify_demo_complete(phone: str, demo: str, details: str = ""):
     msg = (
         f"🎯 *Demo Completed!*\n\n"
         f"📱 Customer: +{phone}\n"
-        f"🤖 Demo Used: {demo}\n"
-        f"⏰ Time: {(datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime('%d %b %Y, %I:%M %p')} IST"
+        f"🤖 Demo: {demo}\n"
+        + (f"📝 {details}\n" if details else "")
+        + f"⏰ Time: {(datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime('%d %b %Y, %I:%M %p')} IST"
     )
     await send_text(ADMIN_NUMBER, msg)
-    print(f"[ADMIN NOTIFIED] Phone=+{phone} | Demo={demo}")
 
 async def notify_lead(phone: str, name: str, business: str):
-    """Notify admin of a Get Started lead."""
     msg = (
         f"🔔 *New HatoBot Lead!*\n\n"
         f"👤 Name: {name}\n"
@@ -228,56 +287,69 @@ async def notify_lead(phone: str, name: str, business: str):
         f"💼 Bot Needed: {business}"
     )
     await send_text(ADMIN_NUMBER, msg)
-    print(f"[LEAD] Name={name} | Phone={phone} | Business={business}")
 
 
-# ─── Core Bot Logic ───
+# ════════════════════════════════════════
+# RETURN CTA HELPER
+# ════════════════════════════════════════
+
+async def send_return_cta(phone: str):
+    await send_buttons(
+        phone,
+        "Want to explore more? 👇",
+        [{"id": "get_started", "title": "🚀 Get Started"}]
+    )
+
+
+# ════════════════════════════════════════
+# MAIN MENU SENDER
+# ════════════════════════════════════════
+
+async def send_main_menu(phone: str, session: dict):
+    session["state"] = "main_menu"
+    await send_buttons(
+        phone,
+        "Welcome to *HatoBot!* 👋\n\nI'm a WhatsApp automation demo bot. Choose what you'd like to explore:",
+        [
+            {"id": "hotel_demo",  "title": "🏨 Hotel Demo"},
+            {"id": "turf_demo",   "title": "⚽ Turf Demo"},
+            {"id": "get_started", "title": "🚀 Get Started"},
+        ]
+    )
+
+
+# ════════════════════════════════════════
+# CORE BOT LOGIC
+# ════════════════════════════════════════
 
 async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_id: str, interactive_title: str):
     session = get_session(phone)
-    state = session["state"]
+    state   = session["state"]
 
-    text    = msg_body.strip().lower() if msg_body else ""
-    btn_id  = interactive_id or ""
-    raw     = btn_id or text
+    text   = msg_body.strip().lower() if msg_body else ""
+    btn_id = interactive_id or ""
+    raw    = btn_id or text
 
     print(f"[{phone}] state={state!r} | text={text!r} | btn_id={btn_id!r}")
 
-    # ════════════════════════════
-    # INIT
-    # ════════════════════════════
-    if state == "init":
-        if "hi hatobot" in text or text in ("hi", "hello", "hey", "start"):
-            session["state"] = "main_menu"
+    # ────────────────────────────────────
+    # GLOBAL: always handle get_started / main menu regardless of state
+    # ────────────────────────────────────
+    if raw in ("get_started", "hotel_demo", "turf_demo") and state not in ("gs_name", "gs_business", "gs_other_desc"):
+        if raw == "get_started":
+            session["state"] = "gs_name"
+            await send_text(phone, "🚀 *Let's get you started with HatoBot!*\n\nWhat is your *name*? 👤")
+            return
+        if raw == "hotel_demo":
+            session["state"] = "hotel_welcome"
+            session["cart"] = {}
             await send_buttons(
                 phone,
-                "Welcome to *HatoBot!* 👋\n\nI'm a WhatsApp automation demo bot. Choose what you'd like to explore:",
-                [
-                    {"id": "hotel_demo",  "title": "🏨 Hotel Demo"},
-                    {"id": "turf_demo",   "title": "⚽ Turf Demo"},
-                    {"id": "get_started", "title": "🚀 Get Started"},
-                ]
+                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu and place your order.",
+                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
             )
-        else:
-            await send_text(phone, "👋 Say *Hi Hatobot* to get started!")
-        return
-
-    # ════════════════════════════
-    # MAIN MENU
-    # ════════════════════════════
-    if state == "main_menu":
-        if raw == "hotel_demo":
-            session["state"] = "hotel_menu"
-            session["cart"] = {}
-            await send_text(phone, "🏨 *Welcome to Chennai Hotel!*\n\nHere's our menu. Select an item to add to your cart 🍛")
-            await send_list(
-                phone,
-                "Tap 'View Menu' to browse our dishes:",
-                "📋 View Menu",
-                build_menu_sections()
-            )
-
-        elif raw == "turf_demo":
+            return
+        if raw == "turf_demo":
             session["state"] = "turf_date"
             await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
             await send_list(
@@ -286,15 +358,71 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 "📅 Select Date",
                 [{"title": "Available Dates", "rows": get_next_7_days()}]
             )
+            return
 
+    # ════════════════════════════
+    # INIT STATE
+    # ════════════════════════════
+    if state == "init":
+        hint = ai_assist(text)
+        if hint == "greet" or text in ("hi hatobot",):
+            await send_main_menu(phone, session)
+        elif hint == "hotel":
+            session["state"] = "hotel_welcome"
+            session["cart"] = {}
+            await send_buttons(
+                phone,
+                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu:",
+                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+            )
+        elif hint == "turf":
+            session["state"] = "turf_date"
+            await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
+            await send_list(phone, "Choose a date:", "📅 Select Date", [{"title": "Available Dates", "rows": get_next_7_days()}])
+        else:
+            await send_main_menu(phone, session)
+        return
+
+    # ════════════════════════════
+    # MAIN MENU STATE
+    # ════════════════════════════
+    if state == "main_menu":
+        hint = ai_assist(text)
+        if hint == "hotel":
+            raw = "hotel_demo"
+        elif hint == "turf":
+            raw = "turf_demo"
+        elif hint in ("greet", "help"):
+            await send_buttons(
+                phone,
+                "I can help you 😊\n\nTry one of these:",
+                [
+                    {"id": "hotel_demo",  "title": "🏨 Hotel Demo"},
+                    {"id": "turf_demo",   "title": "⚽ Turf Demo"},
+                    {"id": "get_started", "title": "🚀 Get Started"},
+                ]
+            )
+            return
+
+        if raw == "hotel_demo":
+            session["state"] = "hotel_welcome"
+            session["cart"] = {}
+            await send_buttons(
+                phone,
+                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu and place your order.",
+                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+            )
+        elif raw == "turf_demo":
+            session["state"] = "turf_date"
+            await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
+            await send_list(phone, "Choose a date:", "📅 Select Date", [{"title": "Available Dates", "rows": get_next_7_days()}])
         elif raw == "get_started":
             session["state"] = "gs_name"
             await send_text(phone, "🚀 *Let's get you started with HatoBot!*\n\nWhat is your *name*? 👤")
-
         else:
             await send_buttons(
                 phone,
-                "Please choose an option 👇",
+                "I can help you 😊\n\nChoose what to explore:",
                 [
                     {"id": "hotel_demo",  "title": "🏨 Hotel Demo"},
                     {"id": "turf_demo",   "title": "⚽ Turf Demo"},
@@ -307,8 +435,65 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     # HOTEL FLOW
     # ════════════════════════════════════════
 
-    # ── HOTEL: SELECT ITEM FROM MENU ──
+    # HOTEL: Welcome — show View Menu button
+    if state == "hotel_welcome":
+        if raw == "hotel_view_menu":
+            session["state"] = "hotel_menu"
+            # Send webview cart link
+            cart_url = f"{CART_BASE_URL}/cart?phone={phone}"
+            await send_cta_url(
+                phone,
+                "🍽️ *Browse our menu and build your order!*\n\nTap to open the menu cart 👇",
+                "🛒 Open Menu",
+                cart_url
+            )
+            # Also show WhatsApp list as fallback
+            await send_list(
+                phone,
+                "Or select from the list below to add items one by one:",
+                "📋 View Menu",
+                build_menu_sections()
+            )
+        else:
+            await send_buttons(
+                phone,
+                "🏨 *Welcome to Chennai Hotel!* 🍽️\n\nTap below to explore our menu:",
+                [{"id": "hotel_view_menu", "title": "👉 View Menu"}]
+            )
+        return
+
+    # HOTEL: Select item from WhatsApp list
     if state == "hotel_menu":
+        # Handle order coming from web app (via text "ORDER:...")
+        if text.startswith("order:"):
+            # Web app sends: "ORDER:1x2,3x1,7x3" (item_id x qty)
+            try:
+                pairs = text.replace("order:", "").split(",")
+                cart = {}
+                for pair in pairs:
+                    parts = pair.strip().split("x")
+                    if len(parts) == 2:
+                        item_id, qty = parts[0].strip(), int(parts[1].strip())
+                        if item_id in MENU_ITEM_MAP and qty > 0:
+                            cart[item_id] = cart.get(item_id, 0) + qty
+                if cart:
+                    session["cart"] = cart
+                    session["state"] = "hotel_order_type"
+                    summary = build_order_summary(cart)
+                    total = cart_total(cart)
+                    await send_text(phone, f"{summary}\n\n──────────────")
+                    await send_buttons(
+                        phone,
+                        "Please choose your order type:",
+                        [
+                            {"id": "hotel_dine_in",  "title": "🍽️ Dine-in"},
+                            {"id": "hotel_takeaway", "title": "🥡 Takeaway"},
+                        ]
+                    )
+                    return
+            except Exception as e:
+                print(f"[HOTEL WEB ORDER PARSE ERROR] {e}")
+
         if btn_id.startswith("menu_"):
             item_id = btn_id.replace("menu_", "")
             item = MENU_ITEM_MAP.get(item_id)
@@ -320,16 +505,10 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                     f"✅ You selected *{item['name']}* — ₹{item['price']}\n\nHow many would you like? 🔢\n_(Type a number, e.g. 1, 2, 3)_"
                 )
         else:
-            # Nudge them back to menu
-            await send_list(
-                phone,
-                "Please select an item from our menu:",
-                "📋 View Menu",
-                build_menu_sections()
-            )
+            await send_list(phone, "Please select an item from our menu:", "📋 View Menu", build_menu_sections())
         return
 
-    # ── HOTEL: ENTER QUANTITY ──
+    # HOTEL: Enter quantity (WhatsApp list flow)
     if state == "hotel_qty":
         if text.isdigit() and int(text) > 0:
             qty = int(text)
@@ -348,23 +527,16 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                     ]
                 )
         else:
-            item_id = session["data"].get("pending_item")
-            item = MENU_ITEM_MAP.get(item_id)
+            item = MENU_ITEM_MAP.get(session["data"].get("pending_item", ""))
             name = item["name"] if item else "the item"
-            await send_text(phone, f"Please type a valid *number* for the quantity of *{name}* 👆\n_(e.g. 1, 2, 3)_")
+            await send_text(phone, f"Please type a valid *number* for *{name}* 👆\n_(e.g. 1, 2, 3)_")
         return
 
-    # ── HOTEL: CART — ADD MORE OR PLACE ORDER ──
+    # HOTEL: Cart — add more or place order
     if state == "hotel_cart":
         if raw == "hotel_add_more":
             session["state"] = "hotel_menu"
-            await send_list(
-                phone,
-                "Select another item to add 🍛",
-                "📋 View Menu",
-                build_menu_sections()
-            )
-
+            await send_list(phone, "Select another item to add 🍛", "📋 View Menu", build_menu_sections())
         elif raw == "hotel_place_order":
             cart = session["cart"]
             if not cart:
@@ -372,15 +544,17 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 session["state"] = "hotel_menu"
                 await send_list(phone, "Select an item:", "📋 View Menu", build_menu_sections())
                 return
-            session["state"] = "hotel_payment"
-            total = cart_total(cart)
-            bill = build_cart_text(cart)
+            session["state"] = "hotel_order_type"
+            summary = build_order_summary(cart)
+            await send_text(phone, f"{summary}\n\n──────────────")
             await send_buttons(
                 phone,
-                f"🧾 *Your Bill*\n\n{bill}\n\n──────────────\n💰 *Total: ₹{total}*\n──────────────\n\nTap *Pay Now* to complete your order:",
-                [{"id": "hotel_pay_now", "title": "💳 Pay Now"}]
+                "Please choose your order type:",
+                [
+                    {"id": "hotel_dine_in",  "title": "🍽️ Dine-in"},
+                    {"id": "hotel_takeaway", "title": "🥡 Takeaway"},
+                ]
             )
-
         else:
             await send_buttons(
                 phone,
@@ -392,27 +566,75 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         return
 
-    # ── HOTEL: PAYMENT ──
-    if state == "hotel_payment":
-        if raw == "hotel_pay_now":
-            total = cart_total(session["cart"])
-            await send_text(
-                phone,
-                f"✅ *Payment of ₹{total} successful!*\n\n📋 After payment, your order will be received in the *dashboard* and our team will prepare it right away!\n\n🙏 Thank you for ordering with *Chennai Hotel!*"
-            )
-            await notify_demo_complete(phone, "🏨 Hotel Demo")
-            reset_session(phone)
+    # HOTEL: Order Type (Dine-in / Takeaway)
+    if state == "hotel_order_type":
+        if raw in ("hotel_dine_in", "hotel_takeaway"):
+            order_type = "Dine-in 🍽️" if raw == "hotel_dine_in" else "Takeaway 🥡"
+            session["data"]["order_type"] = order_type
+            session["state"] = "hotel_billing"
+            cart = session["cart"]
+            total = cart_total(cart)
             await send_buttons(
                 phone,
-                "What would you like to do next?",
-                [{"id": "get_started", "title": "🚀 Get Started"}]
+                f"🧾 *Bill Summary*\n\n"
+                f"Order Type: {order_type}\n"
+                f"Items Total: ₹{total}\n"
+                f"Discount: ₹0\n"
+                f"──────────────\n"
+                f"💰 *Final Price: ₹{total}*\n\n"
+                f"How would you like to pay?",
+                [
+                    {"id": "hotel_pay_now",     "title": "💳 Pay Now"},
+                    {"id": "hotel_pay_counter", "title": "🏪 Pay at Counter"},
+                ]
             )
         else:
-            total = cart_total(session["cart"])
             await send_buttons(
                 phone,
-                f"💰 *Total payable: ₹{total}*\n\nTap Pay Now to confirm your order:",
-                [{"id": "hotel_pay_now", "title": "💳 Pay Now"}]
+                "Please choose your order type:",
+                [
+                    {"id": "hotel_dine_in",  "title": "🍽️ Dine-in"},
+                    {"id": "hotel_takeaway", "title": "🥡 Takeaway"},
+                ]
+            )
+        return
+
+    # HOTEL: Billing → Payment
+    if state == "hotel_billing":
+        cart = session["cart"]
+        total = cart_total(cart)
+        order_type = session["data"].get("order_type", "")
+        if raw == "hotel_pay_now":
+            await send_text(
+                phone,
+                f"✅ *Payment Successful!*\n"
+                f"Your order is confirmed 🎉\n\n"
+                f"📋 Order will appear in dashboard and our team will prepare it right away!\n"
+                f"🙏 Thank you for ordering with *Chennai Hotel!*"
+            )
+            details = f"Order Type: {order_type} | Total: ₹{total}"
+            await notify_demo_complete(phone, "🏨 Hotel Demo", details)
+            reset_session(phone)
+            await send_return_cta(phone)
+        elif raw == "hotel_pay_counter":
+            await send_text(
+                phone,
+                f"✅ *Order Confirmed!*\n"
+                f"Please pay ₹{total} at the counter.\n\n"
+                f"🙏 Thank you for ordering with *Chennai Hotel!*"
+            )
+            details = f"Order Type: {order_type} | Total: ₹{total} | Pay at Counter"
+            await notify_demo_complete(phone, "🏨 Hotel Demo", details)
+            reset_session(phone)
+            await send_return_cta(phone)
+        else:
+            await send_buttons(
+                phone,
+                f"💰 *Total: ₹{total}*\n\nHow would you like to pay?",
+                [
+                    {"id": "hotel_pay_now",     "title": "💳 Pay Now"},
+                    {"id": "hotel_pay_counter", "title": "🏪 Pay at Counter"},
+                ]
             )
         return
 
@@ -420,15 +642,15 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     # TURF FLOW
     # ════════════════════════════════════════
 
-    # ── TURF: DATE SELECTION ──
+    # TURF: Date selection
     if state == "turf_date":
         if btn_id.startswith("date_"):
-            date_val = btn_id.replace("date_", "")  # e.g. "2025-04-01"
-            # Get friendly label from title
+            date_val   = btn_id.replace("date_", "")
             date_label = interactive_title or date_val
-            session["data"]["date"] = date_val
+            session["data"]["date"]       = date_val
             session["data"]["date_label"] = date_label
-            session["state"] = "turf_slot"
+            session["turf_slots"]         = []
+            session["state"]              = "turf_slot"
             await send_list(
                 phone,
                 f"📅 *Date selected:* {date_label}\n\nNow choose your *time slot:*",
@@ -444,23 +666,24 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         return
 
-    # ── TURF: SLOT SELECTION ──
+    # TURF: Slot selection
     if state == "turf_slot":
         if btn_id.startswith("slot_"):
             slot_index = int(btn_id.replace("slot_", ""))
             slot = TURF_SLOTS[slot_index] if slot_index < len(TURF_SLOTS) else None
             if slot:
                 date_label = session["data"].get("date_label", "Selected Date")
-                session["data"]["slot"] = slot
-                session["state"] = "turf_payment"
+                if slot not in session["turf_slots"]:
+                    session["turf_slots"].append(slot)
+                session["state"] = "turf_add_or_confirm"
+                slots_so_far = "\n".join(f"• {s}" for s in session["turf_slots"])
                 await send_buttons(
                     phone,
-                    f"⚽ *Turf Booking Summary*\n\n"
-                    f"📅 Date: {date_label}\n"
-                    f"⏰ Slot: {slot}\n"
-                    f"💰 Amount: ₹{TURF_PRICE}\n\n"
-                    f"Tap *Pay Now* to confirm your booking:",
-                    [{"id": "turf_pay_now", "title": "💳 Pay Now"}]
+                    f"✅ *Slot Added!*\n\n📅 Date: {date_label}\n⏰ Slots:\n{slots_so_far}\n\nWould you like to:",
+                    [
+                        {"id": "turf_add_slot",    "title": "➕ Add Another Slot"},
+                        {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
+                    ]
                 )
         else:
             date_label = session["data"].get("date_label", "Selected Date")
@@ -472,33 +695,82 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         return
 
-    # ── TURF: PAYMENT ──
-    if state == "turf_payment":
-        if raw == "turf_pay_now":
-            slot = session["data"].get("slot", "")
-            date_label = session["data"].get("date_label", "")
-            await send_text(
+    # TURF: Add more or confirm
+    if state == "turf_add_or_confirm":
+        if raw == "turf_add_slot":
+            session["state"] = "turf_slot"
+            date_label = session["data"].get("date_label", "Selected Date")
+            await send_list(
                 phone,
-                f"✅ *Payment of ₹{TURF_PRICE} successful!*\n\n"
-                f"📅 Date: {date_label}\n"
-                f"⏰ Slot: {slot}\n\n"
-                f"📋 After payment, your slot will be *automatically booked and updated in the dashboard!*\n\n"
-                f"🏆 Thank you for booking with *Chennai Turf!*"
+                f"📅 {date_label} — Select another time slot:",
+                "⏰ Select Slot",
+                build_slot_sections(date_label)
             )
-            await notify_demo_complete(phone, "⚽ Turf Demo")
-            reset_session(phone)
+        elif raw == "turf_confirm_booking":
+            session["state"] = "turf_payment"
+            date_label = session["data"].get("date_label", "")
+            slots = session["turf_slots"]
+            summary = build_turf_summary(slots, date_label)
             await send_buttons(
                 phone,
-                "What would you like to do next?",
-                [{"id": "get_started", "title": "🚀 Get Started"}]
+                f"{summary}\n\nChoose payment method:",
+                [
+                    {"id": "turf_pay_now",     "title": "💳 Pay Now"},
+                    {"id": "turf_pay_counter", "title": "🏪 Pay at Counter"},
+                ]
             )
         else:
-            slot = session["data"].get("slot", "")
-            date_label = session["data"].get("date_label", "")
             await send_buttons(
                 phone,
-                f"📅 {date_label} | ⏰ {slot} | 💰 ₹{TURF_PRICE}\n\nTap Pay Now to confirm:",
-                [{"id": "turf_pay_now", "title": "💳 Pay Now"}]
+                "What would you like to do?",
+                [
+                    {"id": "turf_add_slot",        "title": "➕ Add Another Slot"},
+                    {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
+                ]
+            )
+        return
+
+    # TURF: Payment
+    if state == "turf_payment":
+        date_label = session["data"].get("date_label", "")
+        slots = session["turf_slots"]
+        if raw == "turf_pay_now":
+            slots_str = ", ".join(slots)
+            await send_text(
+                phone,
+                f"✅ *Payment Successful!*\n"
+                f"Booking confirmed 🎉\n\n"
+                f"📅 Date: {date_label}\n"
+                f"⏰ Slots: {slots_str}\n"
+                f"💰 Paid: ₹0 (Demo Offer)\n\n"
+                f"📋 Your booking will appear in the dashboard automatically!\n"
+                f"🏆 Thank you for booking with *Chennai Turf!*"
+            )
+            await notify_demo_complete(phone, "⚽ Turf Demo", f"Date: {date_label} | Slots: {slots_str}")
+            reset_session(phone)
+            await send_return_cta(phone)
+        elif raw == "turf_pay_counter":
+            slots_str = ", ".join(slots)
+            await send_text(
+                phone,
+                f"✅ *Booking Confirmed!*\n"
+                f"Pay at venue.\n\n"
+                f"📅 Date: {date_label}\n"
+                f"⏰ Slots: {slots_str}\n\n"
+                f"🏆 See you on the turf! *Chennai Turf!*"
+            )
+            await notify_demo_complete(phone, "⚽ Turf Demo", f"Date: {date_label} | Slots: {slots_str} | Pay at venue")
+            reset_session(phone)
+            await send_return_cta(phone)
+        else:
+            summary = build_turf_summary(slots, date_label)
+            await send_buttons(
+                phone,
+                f"{summary}\n\nChoose payment method:",
+                [
+                    {"id": "turf_pay_now",     "title": "💳 Pay Now"},
+                    {"id": "turf_pay_counter", "title": "🏪 Pay at Counter"},
+                ]
             )
         return
 
@@ -506,7 +778,6 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     # GET STARTED FLOW
     # ════════════════════════════════════════
 
-    # ── GET STARTED: NAME ──
     if state == "gs_name":
         if msg_body and msg_body.strip():
             name = msg_body.strip()
@@ -516,31 +787,28 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 phone,
                 f"Nice to meet you, *{name}!* 😊\n\nWhat type of business would you like to automate with WhatsApp?",
                 "💼 Select Business",
-                [
-                    {
-                        "title": "Business Types",
-                        "rows": [
-                            {"id": "biz_clinic",  "title": "🏥 Clinic",  "description": "Appointments & patient management"},
-                            {"id": "biz_saloon",  "title": "✂️ Saloon",  "description": "Booking & customer management"},
-                            {"id": "biz_hotel",   "title": "🏨 Hotel",   "description": "Menu, orders & table management"},
-                            {"id": "biz_turf",    "title": "⚽ Turf",    "description": "Slot booking & payments"},
-                            {"id": "biz_other",   "title": "💼 Other",   "description": "Tell us about your business"},
-                        ]
-                    }
-                ]
+                [{
+                    "title": "Business Types",
+                    "rows": [
+                        {"id": "biz_clinic",  "title": "🏥 Clinic",  "description": "Appointments & patient management"},
+                        {"id": "biz_saloon",  "title": "✂️ Saloon",  "description": "Booking & customer management"},
+                        {"id": "biz_hotel",   "title": "🏨 Hotel",   "description": "Menu, orders & table management"},
+                        {"id": "biz_turf",    "title": "⚽ Turf",    "description": "Slot booking & payments"},
+                        {"id": "biz_other",   "title": "💼 Other",   "description": "Tell us about your business"},
+                    ]
+                }]
             )
         else:
             await send_text(phone, "Please tell us your *name* to continue 👤")
         return
 
-    # ── GET STARTED: BUSINESS TYPE ──
     if state == "gs_business":
         name = session["data"].get("name", "there")
         business_map = {
-            "biz_clinic": "Clinic",
-            "biz_saloon": "Saloon",
-            "biz_hotel":  "Hotel",
-            "biz_turf":   "Turf",
+            "biz_clinic": "Clinic 🏥",
+            "biz_saloon": "Saloon ✂️",
+            "biz_hotel":  "Hotel 🏨",
+            "biz_turf":   "Turf ⚽",
         }
         if btn_id in business_map:
             biz = business_map[btn_id]
@@ -567,22 +835,19 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 phone,
                 "Please choose your business type:",
                 "💼 Select Business",
-                [
-                    {
-                        "title": "Business Types",
-                        "rows": [
-                            {"id": "biz_clinic",  "title": "🏥 Clinic",  "description": "Appointments & patient management"},
-                            {"id": "biz_saloon",  "title": "✂️ Saloon",  "description": "Booking & customer management"},
-                            {"id": "biz_hotel",   "title": "🏨 Hotel",   "description": "Menu, orders & table management"},
-                            {"id": "biz_turf",    "title": "⚽ Turf",    "description": "Slot booking & payments"},
-                            {"id": "biz_other",   "title": "💼 Other",   "description": "Tell us about your business"},
-                        ]
-                    }
-                ]
+                [{
+                    "title": "Business Types",
+                    "rows": [
+                        {"id": "biz_clinic",  "title": "🏥 Clinic",  "description": "Appointments & patient management"},
+                        {"id": "biz_saloon",  "title": "✂️ Saloon",  "description": "Booking & customer management"},
+                        {"id": "biz_hotel",   "title": "🏨 Hotel",   "description": "Menu, orders & table management"},
+                        {"id": "biz_turf",    "title": "⚽ Turf",    "description": "Slot booking & payments"},
+                        {"id": "biz_other",   "title": "💼 Other",   "description": "Tell us about your business"},
+                    ]
+                }]
             )
         return
 
-    # ── GET STARTED: OTHER DESCRIPTION ──
     if state == "gs_other_desc":
         if msg_body and msg_body.strip():
             name = session["data"].get("name", "there")
@@ -607,30 +872,77 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
         return
 
     # ── FALLBACK ──
+    hint = ai_assist(text)
+    if hint == "hotel":
+        raw = "hotel_demo"
+        session["state"] = "main_menu"
+        await handle_incoming(phone, msg_type, msg_body, "hotel_demo", "")
+        return
+    elif hint == "turf":
+        session["state"] = "main_menu"
+        await handle_incoming(phone, msg_type, msg_body, "turf_demo", "")
+        return
+    elif hint in ("greet", "help"):
+        reset_session(phone)
+        await send_main_menu(phone, get_session(phone))
+        return
+
     reset_session(phone)
-    await send_text(phone, "👋 Say *Hi Hatobot* to start over!")
+    await send_buttons(
+        phone,
+        "I can help you 😊\n\nTry:",
+        [
+            {"id": "hotel_demo",  "title": "🏨 Hotel Demo"},
+            {"id": "turf_demo",   "title": "⚽ Turf Demo"},
+            {"id": "get_started", "title": "🚀 Get Started"},
+        ]
+    )
 
 
-# ─── Webhook Routes ───
+# ════════════════════════════════════════
+# TIMEOUT CHECKER (call periodically via scheduler)
+# ════════════════════════════════════════
+
+async def check_timeouts():
+    """Send nudge if user inactive for 2 hours, then reset."""
+    threshold = timedelta(hours=2)
+    now = datetime.utcnow()
+    for phone, session in list(sessions.items()):
+        if session["state"] == "init":
+            continue
+        elapsed = now - session.get("last_seen", now)
+        if elapsed >= threshold:
+            print(f"[TIMEOUT] Resetting {phone}")
+            await send_buttons(
+                phone,
+                "Still there? 😊\nNeed help with something?",
+                [
+                    {"id": "hotel_demo",  "title": "🏨 Hotel Demo"},
+                    {"id": "turf_demo",   "title": "⚽ Turf Demo"},
+                    {"id": "get_started", "title": "🚀 Get Started"},
+                ]
+            )
+            reset_session(phone)
+
+
+# ════════════════════════════════════════
+# WEBHOOK ROUTES
+# ════════════════════════════════════════
 
 @app.get("/webhook")
 async def verify_webhook(request: Request):
-    """WhatsApp webhook verification."""
-    params = dict(request.query_params)
+    params    = dict(request.query_params)
     mode      = params.get("hub.mode")
     token     = params.get("hub.verify_token")
     challenge = params.get("hub.challenge")
-
     if mode == "subscribe" and token == VERIFY_TOKEN:
         print("[WEBHOOK] Verified successfully.")
         return PlainTextResponse(challenge)
-
     return PlainTextResponse("Forbidden", status_code=403)
 
 
 @app.post("/webhook")
 async def receive_webhook(request: Request):
-    """Receive and process incoming WhatsApp messages."""
     try:
         body = await request.json()
     except Exception:
@@ -643,7 +955,6 @@ async def receive_webhook(request: Request):
         changes = entry["changes"][0]
         value   = changes["value"]
 
-        # Ignore status updates
         if "statuses" in value and "messages" not in value:
             return JSONResponse({"status": "ok"})
 
@@ -661,7 +972,6 @@ async def receive_webhook(request: Request):
 
         if msg_type == "text":
             msg_body = message.get("text", {}).get("body", "")
-
         elif msg_type == "interactive":
             interactive = message.get("interactive", {})
             itype = interactive.get("type", "")
@@ -682,4 +992,16 @@ async def receive_webhook(request: Request):
 
 @app.get("/health")
 async def health():
-    return {"status": "running", "active_sessions": len(sessions)}
+    return {
+        "status": "running",
+        "active_sessions": len(sessions),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+# Optional: call check_timeouts() via APScheduler or a background task
+# Example with APScheduler:
+# from apscheduler.schedulers.asyncio import AsyncIOScheduler
+# scheduler = AsyncIOScheduler()
+# scheduler.add_job(check_timeouts, "interval", minutes=30)
+# scheduler.start()
