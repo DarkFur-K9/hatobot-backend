@@ -402,28 +402,24 @@
     render();
   }
 
+  // ── BOT NUMBER ──
+  const BOT_NUMBER = "919884899024"; // Hatobot WhatsApp number
+
   // ── PLACE ORDER ──
+  // Always send the ORDER: message TO the bot number.
+  // The ?phone= URL param is just used so the bot knows which customer sent it.
   function placeOrder() {
     const items = getCartItems();
     if (items.length === 0) return;
-    const phone = getPhone();
-    // Build ORDER: format expected by backend
+    // Build ORDER: format expected by backend (e.g. ORDER:7x2,4x1)
     const orderText = "ORDER:" + items.map(i => `${i.id}x${i.qty}`).join(",");
-    if (phone) {
-      // Redirect to WhatsApp with pre-filled order text
-      window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(orderText)}`;
-    } else {
-      // Fallback: show success and copy text
-      document.getElementById("successMsg").textContent =
-        "Copy this and send it on WhatsApp:\n" + orderText;
-      document.getElementById("successOverlay").classList.add("visible");
-    }
+    // Open WhatsApp → message the BOT with the pre-filled order text
+    window.location.href = `https://wa.me/${BOT_NUMBER}?text=${encodeURIComponent(orderText)}`;
   }
 
   function closeSuccess() {
     document.getElementById("successOverlay").classList.remove("visible");
-    const phone = getPhone();
-    if (phone) window.location.href = `https://wa.me/${phone}`;
+    window.location.href = `https://wa.me/${BOT_NUMBER}`;
   }
 
   // ── INIT ──
