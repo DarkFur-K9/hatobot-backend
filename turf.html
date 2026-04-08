@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chennai Turf — Slot Picker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4ade80;
+            --secondary: #16a34a;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding-bottom: 100px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* --- Header --- */
+        .header {
+            padding: 24px 20px;
+            background: linear-gradient(to bottom, #1e293b, #0f172a);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        /* --- Slot List --- */
+        .section-title {
+            padding: 20px 20px 10px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .slot-grid {
+            padding: 0 16px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .slot-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 2px solid transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .slot-card.selected {
+            border-color: var(--primary);
+            background: rgba(74, 222, 128, 0.05);
+        }
+
+        .slot-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .slot-info p {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .selected .checkbox {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .checkbox::after {
+            content: "✓";
+            color: #0f172a;
+            font-weight: 800;
+            display: none;
+        }
+
+        .selected .checkbox::after {
+            display: block;
+        }
+
+        /* --- Footer --- */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 200;
+        }
+
+        .btn {
+            flex: 1;
+            height: 56px;
+            border-radius: 16px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #0f172a;
+            box-shadow: 0 8px 20px rgba(74, 222, 128, 0.2);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        .btn-primary:disabled {
+            background: #334155;
+            color: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>⚽ Select Slots</h1>
+        <p id="dateLabel">Pick multiple slots at once</p>
+    </div>
+
+    <div id="morningSection">
+        <div class="section-title">🌅 Morning</div>
+        <div class="slot-grid" id="morningGrid"></div>
+    </div>
+
+    <div id="eveningSection">
+        <div class="section-title">🌆 Evening</div>
+        <div class="slot-grid" id="eveningGrid"></div>
+    </div>
+
+    <div class="footer">
+        <button id="bookBtn" class="btn btn-primary" disabled onclick="confirmBooking()">
+            Confirm Selection
+        </button>
+    </div>
+
+    <script>
+        const TURF_SLOTS = [
+            "06:00 AM - 07:00 AM",
+            "07:00 AM - 08:00 AM",
+            "08:00 AM - 09:00 AM",
+            "09:00 AM - 10:00 AM",
+            "04:00 PM - 05:00 PM",
+            "05:00 PM - 06:00 PM",
+            "06:00 PM - 07:00 PM",
+            "07:00 PM - 08:00 PM",
+            "08:00 PM - 09:00 PM",
+            "09:00 PM - 10:00 PM",
+        ];
+
+        let selectedIndices = new Set();
+        const params = new URLSearchParams(window.location.search);
+        const botPhone = "919884899024";
+
+        function init() {
+            const morningGrid = document.getElementById("morningGrid");
+            const eveningGrid = document.getElementById("eveningGrid");
+            
+            TURF_SLOTS.forEach((slot, index) => {
+                const card = document.createElement("div");
+                card.className = "slot-card";
+                card.innerHTML = `
+                    <div class="slot-info">
+                        <h3>${slot}</h3>
+                        <p>₹500 / slot</p>
+                    </div>
+                    <div class="checkbox"></div>
+                `;
+                card.onclick = () => toggleSlot(index, card);
+                
+                if (slot.includes("AM")) {
+                    morningGrid.appendChild(card);
+                } else {
+                    eveningGrid.appendChild(card);
+                }
+            });
+        }
+
+        function toggleSlot(index, card) {
+            if (selectedIndices.has(index)) {
+                selectedIndices.delete(index);
+                card.classList.remove("selected");
+            } else {
+                selectedIndices.add(index);
+                card.classList.add("selected");
+            }
+            updateButton();
+        }
+
+        function updateButton() {
+            const btn = document.getElementById("bookBtn");
+            const count = selectedIndices.size;
+            btn.disabled = count === 0;
+            btn.textContent = count > 0 ? `Confirm ${count} Slot${count > 1 ? 's' : ''}` : "Confirm Selection";
+        }
+
+        function confirmBooking() {
+            const indices = Array.from(selectedIndices).sort((a,b) => a-b).join(",");
+            const message = `TURF_BOOK:${indices}`;
+            // Redirect back to WhatsApp
+            window.location.href = `https://wa.me/${botPhone}?text=${encodeURIComponent(message)}`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
