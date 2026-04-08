@@ -369,7 +369,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             return
         if effective_raw == "turf_demo":
             session["state"] = "turf_date"
-            await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
+            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nFirst, select your preferred *date* 📅")
             await send_list(
                 phone,
                 "Choose a date for your turf booking:",
@@ -398,7 +398,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         elif hint == "turf":
             session["state"] = "turf_date"
-            await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
+            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nFirst, select your preferred *date* 📅")
             await send_list(phone, "Choose a date:", "📅 Select Date", [{"title": "Available Dates", "rows": get_next_7_days()}])
         else:
             await send_main_menu(phone, session)
@@ -438,7 +438,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         elif raw == "turf_demo":
             session["state"] = "turf_date"
-            await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
+            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nFirst, select your preferred *date* 📅")
             await send_list(phone, "Choose a date:", "📅 Select Date", [{"title": "Available Dates", "rows": get_next_7_days()}])
         elif raw == "get_started":
             session["state"] = "gs_name"
@@ -844,7 +844,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 f"⏰ Slots: {slots_str}\n"
                 f"💰 Paid: ₹0 (Demo Offer)\n\n"
                 f"📋 Your booking will appear in the dashboard automatically!\n"
-                f"🏆 Thank you for booking with *Chennai Turf!*"
+                f"🏆 Thank you for booking with *Hatobot Turf!*"
             )
             await notify_demo_complete(phone, "⚽ Turf Demo", f"Date: {date_label} | Slots: {slots_str}")
             reset_session(phone)
@@ -857,7 +857,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 f"Pay at venue.\n\n"
                 f"📅 Date: {date_label}\n"
                 f"⏰ Slots: {slots_str}\n\n"
-                f"🏆 See you on the turf! *Chennai Turf!*"
+                f"🏆 See you on the turf! *Hatobot Turf!*"
             )
             await notify_demo_complete(phone, "⚽ Turf Demo", f"Date: {date_label} | Slots: {slots_str} | Pay at venue")
             reset_session(phone)
