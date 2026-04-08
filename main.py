@@ -188,17 +188,24 @@ def build_menu_sections() -> list:
         for cat, items in cats.items()
     ]
 
-def build_slot_sections(date_label: str) -> list:
+def build_slot_sections(date_label: str, selected_slots: list = None) -> list:
+    selected_slots = selected_slots or []
     morning = [s for s in TURF_SLOTS if "AM" in s]
     evening = [s for s in TURF_SLOTS if "PM" in s]
+    
+    def get_desc(s):
+        if s in selected_slots:
+            return "📌 Selected (Already in list)"
+        return f"₹{TURF_PRICE_PER_SLOT} • {date_label}"
+
     return [
         {
             "title": "🌅 Morning Slots",
-            "rows": [{"id": f"slot_{i}", "title": s, "description": f"₹{TURF_PRICE_PER_SLOT} • {date_label}"} for i, s in enumerate(morning)]
+            "rows": [{"id": f"slot_{i}", "title": s, "description": get_desc(s)} for i, s in enumerate(morning)]
         },
         {
             "title": "🌆 Evening Slots",
-            "rows": [{"id": f"slot_{i+len(morning)}", "title": s, "description": f"₹{TURF_PRICE_PER_SLOT} • {date_label}"} for i, s in enumerate(evening)]
+            "rows": [{"id": f"slot_{i+len(morning)}", "title": s, "description": get_desc(s)} for i, s in enumerate(evening)]
         }
     ]
 
@@ -670,7 +677,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 phone,
                 f"📅 *Date selected:* {date_label}\n\nNow choose your *time slot:*",
                 "⏰ Select Slot",
-                build_slot_sections(date_label)
+                build_slot_sections(date_label, session.get("turf_slots", []))
             )
         else:
             await send_list(
@@ -690,14 +697,15 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 date_label = session["data"].get("date_label", "Selected Date")
                 if slot not in session["turf_slots"]:
                     session["turf_slots"].append(slot)
-                session["state"] = "turf_add_or_confirm"
+                
+                session["state"] = "turf_review"
                 slots_so_far = "\n".join(f"• {s}" for s in session["turf_slots"])
                 await send_buttons(
                     phone,
-                    f"✅ *Slot Added!*\n\n📅 Date: {date_label}\n⏰ Slots:\n{slots_so_far}\n\nWould you like to:",
+                    f"✅ *Slot Added!*\n\n📅 Date: {date_label}\n⏰ Selected Slots:\n{slots_so_far}\n\nWhat would you like to do?",
                     [
-                        {"id": "turf_add_slot",    "title": "➕ Add Another Slot"},
                         {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
+                        {"id": "turf_edit_booking", "title": "✏️ Edit Booking"},
                     ]
                 )
         else:
@@ -706,22 +714,13 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 phone,
                 "Please select a time slot:",
                 "⏰ Select Slot",
-                build_slot_sections(date_label)
+                build_slot_sections(date_label, session.get("turf_slots", []))
             )
         return
 
-    # TURF: Add more or confirm
-    if state == "turf_add_or_confirm":
-        if raw == "turf_add_slot":
-            session["state"] = "turf_slot"
-            date_label = session["data"].get("date_label", "Selected Date")
-            await send_list(
-                phone,
-                f"📅 {date_label} — Select another time slot:",
-                "⏰ Select Slot",
-                build_slot_sections(date_label)
-            )
-        elif raw == "turf_confirm_booking":
+    # TURF: Review selection
+    if state == "turf_review":
+        if raw == "turf_confirm_booking":
             session["state"] = "turf_payment"
             date_label = session["data"].get("date_label", "")
             slots = session["turf_slots"]
@@ -734,15 +733,89 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                     {"id": "turf_pay_counter", "title": "🏪 Pay at Counter"},
                 ]
             )
-        else:
+        elif raw == "turf_edit_booking":
+            session["state"] = "turf_edit"
             await send_buttons(
                 phone,
-                "What would you like to do?",
+                "🛠️ *Edit Booking*\n\nChoose an option:",
                 [
-                    {"id": "turf_add_slot",        "title": "➕ Add Another Slot"},
-                    {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
+                    {"id": "turf_add_slot",    "title": "➕ Add Slot"},
+                    {"id": "turf_remove_slot", "title": "❌ Remove Slot"},
+                    {"id": "turf_back_review", "title": "🔙 Back"},
                 ]
             )
+        else:
+            slots_so_far = "\n".join(f"• {s}" for s in session["turf_slots"])
+            await send_buttons(
+                phone,
+                f"⏰ *Booking Review*\n\nSlots:\n{slots_so_far}\n\nWhat would you like to do?",
+                [
+                    {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
+                    {"id": "turf_edit_booking", "title": "✏️ Edit Booking"},
+                ]
+            )
+        return
+
+    # TURF: Edit options
+    if state == "turf_edit":
+        if raw == "turf_add_slot":
+            session["state"] = "turf_slot"
+            date_label = session["data"].get("date_label", "Selected Date")
+            await send_list(
+                phone,
+                f"📅 {date_label} — Select another time slot:",
+                "⏰ Select Slot",
+                build_slot_sections(date_label, session.get("turf_slots", []))
+            )
+        elif raw == "turf_remove_slot":
+            if not session["turf_slots"]:
+                await send_text(phone, "No slots to remove.")
+                session["state"] = "turf_review"
+                # (Re-send review buttons)
+                return
+            
+            session["state"] = "turf_remove_list"
+            rows = [{"id": f"rem_{i}", "title": s, "description": "❌ Click to remove"} for i, s in enumerate(session["turf_slots"])]
+            await send_list(
+                phone,
+                "Select a slot to *remove*:",
+                "❌ Remove Slot",
+                [{"title": "Selected Slots", "rows": rows}]
+            )
+        elif raw == "turf_back_review":
+            session["state"] = "turf_review"
+            slots_so_far = "\n".join(f"• {s}" for s in session["turf_slots"])
+            await send_buttons(
+                phone,
+                f"⏰ *Booking Review*\n\nSlots:\n{slots_so_far}\n\nWhat would you like to do?",
+                [
+                    {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
+                    {"id": "turf_edit_booking", "title": "✏️ Edit Booking"},
+                ]
+            )
+        return
+
+    # TURF: Remove slot action
+    if state == "turf_remove_list":
+        if btn_id.startswith("rem_"):
+            idx = int(btn_id.replace("rem_", ""))
+            if 0 <= idx < len(session["turf_slots"]):
+                removed = session["turf_slots"].pop(idx)
+                await send_text(phone, f"✅ Removed: {removed}")
+            
+            session["state"] = "turf_review"
+            slots_so_far = "\n".join(f"• {s}" for s in session["turf_slots"]) if session["turf_slots"] else "No slots selected."
+            await send_buttons(
+                phone,
+                f"⏰ *Booking Review*\n\nSlots:\n{slots_so_far}\n\nWhat would you like to do?",
+                [
+                    {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"} if session["turf_slots"] else {"id": "turf_add_slot", "title": "➕ Add Slot"},
+                    {"id": "turf_edit_booking", "title": "✏️ Edit Booking"},
+                ]
+            )
+        else:
+            session["state"] = "turf_edit"
+            # (Re-send edit buttons)
         return
 
     # TURF: Payment

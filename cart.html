@@ -1,13 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Chennai Hotel — Menu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
       font-family: 'Inter', sans-serif;
@@ -26,14 +34,16 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
     }
+
     .header-content {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       padding: 16px 20px 8px;
     }
+
     .header-tag {
       font-size: 11px;
       color: #f4a261;
@@ -42,7 +52,14 @@
       text-transform: uppercase;
       margin-bottom: 2px;
     }
-    .header-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+
+    .header-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
     .cart-badge {
       background: #f4a261;
       border-radius: 20px;
@@ -53,8 +70,16 @@
       opacity: 0;
       transition: opacity 0.2s;
     }
-    .cart-badge.visible { opacity: 1; }
-    .cart-count { font-weight: 800; font-size: 15px; color: #1a1a2e; }
+
+    .cart-badge.visible {
+      opacity: 1;
+    }
+
+    .cart-count {
+      font-weight: 800;
+      font-size: 15px;
+      color: #1a1a2e;
+    }
 
     /* ── TABS ── */
     .tabs-wrapper {
@@ -63,16 +88,21 @@
       -webkit-overflow-scrolling: touch;
       padding: 8px 12px 0;
     }
-    .tabs-wrapper::-webkit-scrollbar { display: none; }
+
+    .tabs-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
     .tabs {
       display: flex;
       gap: 8px;
       padding-bottom: 1px;
       min-width: max-content;
     }
+
     .tab {
-      background: rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.7);
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
       border: none;
       border-radius: 20px 20px 0 0;
       padding: 8px 14px;
@@ -83,7 +113,11 @@
       transition: all 0.15s;
       font-family: 'Inter', sans-serif;
     }
-    .tab.active { background: #f7f7f2; color: #1a1a2e; }
+
+    .tab.active {
+      background: #f7f7f2;
+      color: #1a1a2e;
+    }
 
     /* ── MENU LIST ── */
     .menu-list {
@@ -92,6 +126,7 @@
       flex-direction: column;
       gap: 10px;
     }
+
     .menu-item {
       background: #fff;
       border-radius: 14px;
@@ -99,31 +134,96 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
       animation: fadeIn 0.2s ease;
     }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-    .item-name { font-size: 15px; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; }
-    .item-price { font-size: 14px; color: #f4a261; font-weight: 700; }
-    .stepper { display: flex; align-items: center; gap: 10px; margin-left: 12px; }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .item-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 3px;
+    }
+
+    .item-price {
+      font-size: 14px;
+      color: #f4a261;
+      font-weight: 700;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 12px;
+    }
+
     .step-btn {
-      width: 34px; height: 34px; border-radius: 50%;
-      border: 2px solid #e0e0e0; background: #fff;
-      font-size: 20px; font-weight: 700; color: #555;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      line-height: 1; padding: 0; font-family: 'Inter', sans-serif;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 2px solid #e0e0e0;
+      background: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      color: #555;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
       transition: all 0.15s;
     }
-    .step-btn:active { transform: scale(0.92); }
-    .step-btn.add { background: #1a1a2e; border-color: #1a1a2e; color: #fff; }
-    .qty-text { font-size: 17px; font-weight: 800; color: #1a1a2e; min-width: 20px; text-align: center; }
+
+    .step-btn:active {
+      transform: scale(0.92);
+    }
+
+    .step-btn.add {
+      background: #1a1a2e;
+      border-color: #1a1a2e;
+      color: #fff;
+    }
+
+    .qty-text {
+      font-size: 17px;
+      font-weight: 800;
+      color: #1a1a2e;
+      min-width: 20px;
+      text-align: center;
+    }
+
     .add-btn {
-      background: #1a1a2e; color: #fff; border: none; border-radius: 8px;
-      padding: 9px 18px; font-weight: 800; font-size: 13px; letter-spacing: 0.5px;
-      cursor: pointer; font-family: 'Inter', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
       transition: all 0.15s;
     }
-    .add-btn:active { transform: scale(0.95); }
+
+    .add-btn:active {
+      transform: scale(0.95);
+    }
 
     /* ── CART SUMMARY ── */
     .cart-summary {
@@ -131,222 +231,397 @@
       background: #fff;
       border-radius: 16px;
       padding: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
       display: none;
     }
-    .cart-summary.visible { display: block; animation: fadeIn 0.2s ease; }
-    .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .cart-title { font-weight: 800; font-size: 16px; color: #1a1a2e; }
-    .cart-item-count { font-size: 12px; color: #888; font-weight: 600; }
-    .cart-lines { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-    .cart-line { display: flex; align-items: center; gap: 8px; }
-    .cart-line-name { flex: 1; font-size: 14px; color: #333; font-weight: 500; }
-    .cart-line-controls { display: flex; align-items: center; gap: 8px; }
+
+    .cart-summary.visible {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .cart-title {
+      font-weight: 800;
+      font-size: 16px;
+      color: #1a1a2e;
+    }
+
+    .cart-item-count {
+      font-size: 12px;
+      color: #888;
+      font-weight: 600;
+    }
+
+    .cart-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .cart-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cart-line-name {
+      flex: 1;
+      font-size: 14px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .cart-line-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .mini-btn {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 1.5px solid #ddd; background: #fff;
-      font-size: 16px; font-weight: 700; color: #555;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
-      font-family: 'Inter', sans-serif; transition: all 0.15s;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid #ddd;
+      background: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      color: #555;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
     }
-    .mini-btn.add { background: #1a1a2e; border-color: #1a1a2e; color: #fff; }
-    .mini-qty { font-size: 15px; font-weight: 800; min-width: 18px; text-align: center; color: #1a1a2e; }
-    .cart-line-price { font-size: 14px; font-weight: 700; color: #f4a261; min-width: 50px; text-align: right; }
+
+    .mini-btn.add {
+      background: #1a1a2e;
+      border-color: #1a1a2e;
+      color: #fff;
+    }
+
+    .mini-qty {
+      font-size: 15px;
+      font-weight: 800;
+      min-width: 18px;
+      text-align: center;
+      color: #1a1a2e;
+    }
+
+    .cart-line-price {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f4a261;
+      min-width: 50px;
+      text-align: right;
+    }
+
     .cart-total {
-      display: flex; justify-content: space-between; align-items: center;
-      padding-top: 12px; border-top: 1px solid #f0f0f0;
-      font-weight: 700; font-size: 15px; color: #1a1a2e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+      font-weight: 700;
+      font-size: 15px;
+      color: #1a1a2e;
     }
-    .total-amount { font-size: 20px; font-weight: 900; }
+
+    .total-amount {
+      font-size: 20px;
+      font-weight: 900;
+    }
 
     /* ── STICKY BAR ── */
     .sticky-bar {
-      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 480px; padding: 12px 16px;
-      background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
-      border-top: 1px solid #eee; box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-      z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid #eee;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
     }
-    .sticky-bar.visible { opacity: 1; pointer-events: auto; }
-    .sticky-content { display: flex; justify-content: space-between; align-items: center; }
-    .sticky-info .sticky-count { font-size: 12px; color: #888; font-weight: 600; }
-    .sticky-info .sticky-total { font-size: 20px; font-weight: 900; color: #1a1a2e; }
+
+    .sticky-bar.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sticky-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sticky-info .sticky-count {
+      font-size: 12px;
+      color: #888;
+      font-weight: 600;
+    }
+
+    .sticky-info .sticky-total {
+      font-size: 20px;
+      font-weight: 900;
+      color: #1a1a2e;
+    }
+
     .place-order-btn {
       background: linear-gradient(135deg, #f4a261, #e76f51);
-      color: #fff; border: none; border-radius: 14px;
-      padding: 14px 28px; font-weight: 800; font-size: 16px;
-      cursor: pointer; box-shadow: 0 4px 14px rgba(244,162,97,0.4);
-      letter-spacing: 0.3px; font-family: 'Inter', sans-serif;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 28px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(244, 162, 97, 0.4);
+      letter-spacing: 0.3px;
+      font-family: 'Inter', sans-serif;
       transition: all 0.15s;
     }
-    .place-order-btn:active { transform: scale(0.97); }
+
+    .place-order-btn:active {
+      transform: scale(0.97);
+    }
 
     /* ── SUCCESS OVERLAY ── */
     .success-overlay {
-      display: none; position: fixed; inset: 0; z-index: 300;
-      background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 20px;
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
-    .success-overlay.visible { display: flex; }
+
+    .success-overlay.visible {
+      display: flex;
+    }
+
     .success-card {
-      background: #fff; border-radius: 24px; padding: 32px 24px;
-      text-align: center; max-width: 340px; width: 100%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: #fff;
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       animation: scaleIn 0.3s ease;
     }
-    @keyframes scaleIn { from { opacity:0; transform:scale(0.85); } to { opacity:1; transform:scale(1); } }
-    .success-icon { font-size: 56px; margin-bottom: 16px; }
-    .success-title { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-bottom: 8px; }
-    .success-msg { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 24px; }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.85);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .success-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+
+    .success-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+
+    .success-msg {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
     .success-btn {
       background: linear-gradient(135deg, #f4a261, #e76f51);
-      color: #fff; border: none; border-radius: 14px;
-      padding: 14px 32px; font-weight: 800; font-size: 16px;
-      cursor: pointer; width: 100%; font-family: 'Inter', sans-serif;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 32px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
     }
 
     /* ── EMPTY STATE ── */
     .empty-msg {
-      text-align: center; padding: 40px 20px; color: #999; font-size: 14px; font-weight: 500;
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+      font-size: 14px;
+      font-weight: 500;
     }
   </style>
 </head>
+
 <body>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-content">
-    <div>
-      <div class="header-tag">🏨 Chennai Hotel</div>
-      <h1 class="header-title">Our Menu</h1>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <div class="header-tag">🏨 Chennai Hotel</div>
+        <h1 class="header-title">Our Menu</h1>
+      </div>
+      <div class="cart-badge" id="cartBadge">
+        <span>🛒</span>
+        <span class="cart-count" id="cartCount">0</span>
+      </div>
     </div>
-    <div class="cart-badge" id="cartBadge">
-      <span>🛒</span>
-      <span class="cart-count" id="cartCount">0</span>
+    <div class="tabs-wrapper">
+      <div class="tabs" id="tabsContainer"></div>
     </div>
   </div>
-  <div class="tabs-wrapper">
-    <div class="tabs" id="tabsContainer"></div>
-  </div>
-</div>
 
-<!-- MENU LIST -->
-<div class="menu-list" id="menuList"></div>
+  <!-- MENU LIST -->
+  <div class="menu-list" id="menuList"></div>
 
-<!-- CART SUMMARY -->
-<div class="cart-summary" id="cartSummary">
-  <div class="cart-header">
-    <span class="cart-title">🛒 Your Cart</span>
-    <span class="cart-item-count" id="cartItemCountLabel"></span>
-  </div>
-  <div class="cart-lines" id="cartLines"></div>
-  <div class="cart-total">
-    <span>Total</span>
-    <span class="total-amount" id="cartTotalDisplay">₹0</span>
-  </div>
-</div>
-
-<!-- STICKY BAR -->
-<div class="sticky-bar" id="stickyBar">
-  <div class="sticky-content">
-    <div class="sticky-info">
-      <div class="sticky-count" id="stickyCount"></div>
-      <div class="sticky-total" id="stickyTotal"></div>
+  <!-- CART SUMMARY -->
+  <div class="cart-summary" id="cartSummary">
+    <div class="cart-header">
+      <span class="cart-title">🛒 Your Cart</span>
+      <span class="cart-item-count" id="cartItemCountLabel"></span>
     </div>
-    <button class="place-order-btn" onclick="placeOrder()">Place Order →</button>
+    <div class="cart-lines" id="cartLines"></div>
+    <div class="cart-total">
+      <span>Total</span>
+      <span class="total-amount" id="cartTotalDisplay">₹0</span>
+    </div>
   </div>
-</div>
 
-<!-- SUCCESS OVERLAY -->
-<div class="success-overlay" id="successOverlay">
-  <div class="success-card">
-    <div class="success-icon">✅</div>
-    <div class="success-title">Order Sent!</div>
-    <div class="success-msg" id="successMsg">Your order has been sent to WhatsApp. The bot will confirm it shortly!</div>
-    <button class="success-btn" onclick="closeSuccess()">Go Back to WhatsApp</button>
+  <!-- STICKY BAR -->
+  <div class="sticky-bar" id="stickyBar">
+    <div class="sticky-content">
+      <div class="sticky-info">
+        <div class="sticky-count" id="stickyCount"></div>
+        <div class="sticky-total" id="stickyTotal"></div>
+      </div>
+      <button class="place-order-btn" onclick="placeOrder()">Place Order →</button>
+    </div>
   </div>
-</div>
 
-<script>
-  // ── MENU DATA ──
-  const MENU_ITEMS = [
-    { id: "1",  name: "Idli (2 pcs)",       price: 40,  cat: "🌅 Breakfast" },
-    { id: "2",  name: "Masala Dosa",         price: 70,  cat: "🌅 Breakfast" },
-    { id: "3",  name: "Pongal",              price: 60,  cat: "🌅 Breakfast" },
-    { id: "4",  name: "Chettinad Chicken",   price: 220, cat: "🍛 Main Course" },
-    { id: "5",  name: "Mutton Kuzhambu",     price: 280, cat: "🍛 Main Course" },
-    { id: "6",  name: "Fish Curry",          price: 200, cat: "🍛 Main Course" },
-    { id: "7",  name: "Chicken Biryani",     price: 180, cat: "🍛 Main Course" },
-    { id: "8",  name: "Veg Biryani",         price: 130, cat: "🍛 Main Course" },
-    { id: "9",  name: "Kothu Parotta",       price: 120, cat: "🫓 Snacks" },
-    { id: "10", name: "Filter Coffee",       price: 30,  cat: "☕ Beverages" },
-  ];
+  <!-- SUCCESS OVERLAY -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-card">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Order Sent!</div>
+      <div class="success-msg" id="successMsg">Your order has been sent to WhatsApp. The bot will confirm it shortly!
+      </div>
+      <button class="success-btn" onclick="closeSuccess()">Go Back to WhatsApp</button>
+    </div>
+  </div>
 
-  const CATEGORIES = ["All", ...new Set(MENU_ITEMS.map(i => i.cat))];
+  <script>
+    // ── MENU DATA ──
+    const MENU_ITEMS = [
+      { id: "1", name: "Idli (2 pcs)", price: 40, cat: "🌅 Breakfast" },
+      { id: "2", name: "Masala Dosa", price: 70, cat: "🌅 Breakfast" },
+      { id: "3", name: "Pongal", price: 60, cat: "🌅 Breakfast" },
+      { id: "4", name: "Chettinad Chicken", price: 220, cat: "🍛 Main Course" },
+      { id: "5", name: "Mutton Kuzhambu", price: 280, cat: "🍛 Main Course" },
+      { id: "6", name: "Fish Curry", price: 200, cat: "🍛 Main Course" },
+      { id: "7", name: "Chicken Biryani", price: 180, cat: "🍛 Main Course" },
+      { id: "8", name: "Veg Biryani", price: 130, cat: "🍛 Main Course" },
+      { id: "9", name: "Kothu Parotta", price: 120, cat: "🫓 Snacks" },
+      { id: "10", name: "Filter Coffee", price: 30, cat: "☕ Beverages" },
+    ];
 
-  // ── STATE ──
-  let cart = {};        // { id: qty }
-  let activeCategory = "All";
+    const CATEGORIES = ["All", ...new Set(MENU_ITEMS.map(i => i.cat))];
 
-  // ── HELPERS ──
-  function getPhone() {
-    return new URLSearchParams(window.location.search).get("phone") || "";
-  }
+    // ── STATE ──
+    let cart = {};        // { id: qty }
+    let activeCategory = "All";
 
-  function getCartItems() {
-    return Object.entries(cart)
-      .map(([id, qty]) => ({ ...MENU_ITEMS.find(i => i.id === id), qty }))
-      .filter(Boolean);
-  }
-
-  function getItemCount() {
-    return Object.values(cart).reduce((s, q) => s + q, 0);
-  }
-
-  function getTotal() {
-    return getCartItems().reduce((s, i) => s + i.price * i.qty, 0);
-  }
-
-  function setQty(id, delta) {
-    const cur = cart[id] || 0;
-    const next = Math.max(0, cur + delta);
-    if (next === 0) {
-      delete cart[id];
-    } else {
-      cart[id] = next;
+    // ── HELPERS ──
+    function getPhone() {
+      return new URLSearchParams(window.location.search).get("phone") || "";
     }
-    render();
-  }
 
-  // ── RENDER ──
-  function render() {
-    renderTabs();
-    renderMenu();
-    renderCartSummary();
-    renderStickyBar();
-    renderCartBadge();
-  }
+    function getCartItems() {
+      return Object.entries(cart)
+        .map(([id, qty]) => ({ ...MENU_ITEMS.find(i => i.id === id), qty }))
+        .filter(Boolean);
+    }
 
-  function renderTabs() {
-    const tabs = document.getElementById("tabsContainer");
-    tabs.innerHTML = CATEGORIES.map(cat => `
-      <button class="tab ${cat === activeCategory ? 'active' : ''}" onclick="setCategory('${cat.replace(/'/g,'\\\'')}')">${cat}</button>
+    function getItemCount() {
+      return Object.values(cart).reduce((s, q) => s + q, 0);
+    }
+
+    function getTotal() {
+      return getCartItems().reduce((s, i) => s + i.price * i.qty, 0);
+    }
+
+    function setQty(id, delta) {
+      const cur = cart[id] || 0;
+      const next = Math.max(0, cur + delta);
+      if (next === 0) {
+        delete cart[id];
+      } else {
+        cart[id] = next;
+      }
+      render();
+    }
+
+    // ── RENDER ──
+    function render() {
+      renderTabs();
+      renderMenu();
+      renderCartSummary();
+      renderStickyBar();
+      renderCartBadge();
+    }
+
+    function renderTabs() {
+      const tabs = document.getElementById("tabsContainer");
+      tabs.innerHTML = CATEGORIES.map(cat => `
+      <button class="tab ${cat === activeCategory ? 'active' : ''}" onclick="setCategory('${cat.replace(/'/g, '\\\'')}')">${cat}</button>
     `).join("");
-  }
+    }
 
-  function renderMenu() {
-    const list = document.getElementById("menuList");
-    const filtered = activeCategory === "All" ? MENU_ITEMS : MENU_ITEMS.filter(i => i.cat === activeCategory);
-    if (filtered.length === 0) { list.innerHTML = '<div class="empty-msg">No items in this category.</div>'; return; }
-    list.innerHTML = filtered.map(item => {
-      const qty = cart[item.id] || 0;
-      const stepper = qty > 0 ? `
+    function renderMenu() {
+      const list = document.getElementById("menuList");
+      const filtered = activeCategory === "All" ? MENU_ITEMS : MENU_ITEMS.filter(i => i.cat === activeCategory);
+      if (filtered.length === 0) { list.innerHTML = '<div class="empty-msg">No items in this category.</div>'; return; }
+      list.innerHTML = filtered.map(item => {
+        const qty = cart[item.id] || 0;
+        const stepper = qty > 0 ? `
         <div class="stepper">
           <button class="step-btn" onclick="setQty('${item.id}', -1)">−</button>
           <span class="qty-text">${qty}</span>
           <button class="step-btn add" onclick="setQty('${item.id}', 1)">+</button>
         </div>
       ` : `<div class="stepper"><button class="add-btn" onclick="setQty('${item.id}', 1)">ADD</button></div>`;
-      return `
+        return `
         <div class="menu-item">
           <div>
             <div class="item-name">${item.name}</div>
@@ -355,24 +630,24 @@
           ${stepper}
         </div>
       `;
-    }).join("");
-  }
+      }).join("");
+    }
 
-  function renderCartBadge() {
-    const count = getItemCount();
-    const badge = document.getElementById("cartBadge");
-    document.getElementById("cartCount").textContent = count;
-    badge.classList.toggle("visible", count > 0);
-  }
+    function renderCartBadge() {
+      const count = getItemCount();
+      const badge = document.getElementById("cartBadge");
+      document.getElementById("cartCount").textContent = count;
+      badge.classList.toggle("visible", count > 0);
+    }
 
-  function renderCartSummary() {
-    const items = getCartItems();
-    const summary = document.getElementById("cartSummary");
-    if (items.length === 0) { summary.classList.remove("visible"); return; }
-    summary.classList.add("visible");
-    const count = getItemCount();
-    document.getElementById("cartItemCountLabel").textContent = `${count} item${count > 1 ? 's' : ''}`;
-    document.getElementById("cartLines").innerHTML = items.map(item => `
+    function renderCartSummary() {
+      const items = getCartItems();
+      const summary = document.getElementById("cartSummary");
+      if (items.length === 0) { summary.classList.remove("visible"); return; }
+      summary.classList.add("visible");
+      const count = getItemCount();
+      document.getElementById("cartItemCountLabel").textContent = `${count} item${count > 1 ? 's' : ''}`;
+      document.getElementById("cartLines").innerHTML = items.map(item => `
       <div class="cart-line">
         <div class="cart-line-name">${item.name}</div>
         <div class="cart-line-controls">
@@ -383,47 +658,48 @@
         <div class="cart-line-price">₹${item.price * item.qty}</div>
       </div>
     `).join("");
-    document.getElementById("cartTotalDisplay").textContent = `₹${getTotal()}`;
-  }
-
-  function renderStickyBar() {
-    const items = getCartItems();
-    const bar = document.getElementById("stickyBar");
-    bar.classList.toggle("visible", items.length > 0);
-    if (items.length > 0) {
-      const count = getItemCount();
-      document.getElementById("stickyCount").textContent = `${count} item${count>1?'s':''}`;
-      document.getElementById("stickyTotal").textContent = `₹${getTotal()}`;
+      document.getElementById("cartTotalDisplay").textContent = `₹${getTotal()}`;
     }
-  }
 
-  function setCategory(cat) {
-    activeCategory = cat;
+    function renderStickyBar() {
+      const items = getCartItems();
+      const bar = document.getElementById("stickyBar");
+      bar.classList.toggle("visible", items.length > 0);
+      if (items.length > 0) {
+        const count = getItemCount();
+        document.getElementById("stickyCount").textContent = `${count} item${count > 1 ? 's' : ''}`;
+        document.getElementById("stickyTotal").textContent = `₹${getTotal()}`;
+      }
+    }
+
+    function setCategory(cat) {
+      activeCategory = cat;
+      render();
+    }
+
+    // ── BOT NUMBER ──
+    const BOT_NUMBER = "919884899024"; // Hatobot WhatsApp number
+
+    // ── PLACE ORDER ──
+    // Always send the ORDER: message TO the bot number.
+    // The ?phone= URL param is just used so the bot knows which customer sent it.
+    function placeOrder() {
+      const items = getCartItems();
+      if (items.length === 0) return;
+      // Build ORDER: format expected by backend (e.g. ORDER:7x2,4x1)
+      const orderText = "ORDER:" + items.map(i => `${i.id}x${i.qty}`).join(",");
+      // Open WhatsApp → message the BOT with the pre-filled order text
+      window.location.href = `https://wa.me/${BOT_NUMBER}?text=${encodeURIComponent(orderText)}`;
+    }
+
+    function closeSuccess() {
+      document.getElementById("successOverlay").classList.remove("visible");
+      window.location.href = `https://wa.me/${BOT_NUMBER}`;
+    }
+
+    // ── INIT ──
     render();
-  }
-
-  // ── BOT NUMBER ──
-  const BOT_NUMBER = "919884899024"; // Hatobot WhatsApp number
-
-  // ── PLACE ORDER ──
-  // Always send the ORDER: message TO the bot number.
-  // The ?phone= URL param is just used so the bot knows which customer sent it.
-  function placeOrder() {
-    const items = getCartItems();
-    if (items.length === 0) return;
-    // Build ORDER: format expected by backend (e.g. ORDER:7x2,4x1)
-    const orderText = "ORDER:" + items.map(i => `${i.id}x${i.qty}`).join(",");
-    // Open WhatsApp → message the BOT with the pre-filled order text
-    window.location.href = `https://wa.me/${BOT_NUMBER}?text=${encodeURIComponent(orderText)}`;
-  }
-
-  function closeSuccess() {
-    document.getElementById("successOverlay").classList.remove("visible");
-    window.location.href = `https://wa.me/${BOT_NUMBER}`;
-  }
-
-  // ── INIT ──
-  render();
-</script>
+  </script>
 </body>
+
 </html>
