@@ -340,14 +340,22 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     print(f"[{phone}] state={state!r} | text={text!r} | btn_id={btn_id!r}")
 
     # ────────────────────────────────────
-    # GLOBAL: always handle get_started / main menu regardless of state
+    # GLOBAL: Always allow switching demos or AI assistance interrupts
     # ────────────────────────────────────
-    if raw in ("get_started", "hotel_demo", "turf_demo") and state not in ("gs_name", "gs_business", "gs_other_desc"):
-        if raw == "get_started":
+    hint = ai_assist(text)
+    
+    # If a clear demo switch is requested (via button or text hint)
+    effective_raw = raw
+    if hint == "hotel": effective_raw = "hotel_demo"
+    if hint == "turf":  effective_raw = "turf_demo"
+    if hint == "help":  effective_raw = "get_started"
+
+    if effective_raw in ("get_started", "hotel_demo", "turf_demo"):
+        if effective_raw == "get_started":
             session["state"] = "gs_name"
             await send_text(phone, "🚀 *Let's get you started with HatoBot!*\n\nWhat is your *name*? 👤")
             return
-        if raw == "hotel_demo":
+        if effective_raw == "hotel_demo":
             session["state"] = "hotel_welcome"
             session["cart"] = {}
             await send_buttons(
@@ -358,7 +366,8 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                     {"id": "hotel_bulk_order",  "title": "📦 Bulk Order"},
                 ]
             )
-        if raw == "turf_demo":
+            return
+        if effective_raw == "turf_demo":
             session["state"] = "turf_date"
             await send_text(phone, "⚽ *Welcome to Chennai Turf Booking!*\n\nFirst, select your preferred *date* 📅")
             await send_list(
@@ -671,15 +680,13 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             session["data"]["date"]       = date_val
             session["data"]["date_label"] = date_label
             session["turf_slots"]         = []
-            session["state"]              = "turf_slot_choice"
+            session["state"]              = "turf_slot"
             
-            await send_buttons(
+            await send_list(
                 phone,
-                f"📅 *Date:* {date_label}\n\nHow would you like to select your slots?",
-                [
-                    {"id": "turf_open_picker", "title": "⏰ Open Slot Picker"},
-                    {"id": "turf_use_list",    "title": "📋 Select from List"},
-                ]
+                f"📅 *Date:* {date_label}\n\nNow choose your *time slot:*",
+                "⏰ Select Slot",
+                build_slot_sections(date_label, session.get("turf_slots", []))
             )
         else:
             await send_list(
@@ -690,27 +697,6 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         return
 
-    # TURF: Choice between webview and list
-    if state == "turf_slot_choice":
-        if raw == "turf_open_picker":
-            session["state"] = "turf_review"
-            picker_url = f"{CART_BASE_URL}/turf.html?phone={phone}"
-            await send_cta_url(
-                phone,
-                "⚽ *Select multiple slots at once!* 👇",
-                "⏰ Open Picker",
-                picker_url
-            )
-        elif raw == "turf_use_list":
-            session["state"] = "turf_slot"
-            date_label = session["data"].get("date_label", "Selected Date")
-            await send_list(
-                phone,
-                f"📅 *Date selected:* {date_label}\n\nNow choose your *time slot:*",
-                "⏰ Select Slot",
-                build_slot_sections(date_label, session.get("turf_slots", []))
-            )
-        return
 
     # TURF: Slot selection
     if state == "turf_slot":
@@ -759,14 +745,13 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 ]
             )
         elif raw == "turf_add_slot":
-            session["state"] = "turf_slot_choice"
-            await send_buttons(
+            session["state"] = "turf_slot"
+            date_label = session["data"].get("date_label", "Selected Date")
+            await send_list(
                 phone,
-                "➕ *Add more slots*\n\nHow would you like to select?",
-                [
-                    {"id": "turf_open_picker", "title": "⏰ Open Slot Picker"},
-                    {"id": "turf_use_list",    "title": "📋 Select from List"},
-                ]
+                f"📅 {date_label} — Select another time slot:",
+                "⏰ Select Slot",
+                build_slot_sections(date_label, session.get("turf_slots", []))
             )
         elif raw == "turf_remove_slot":
             if not session["turf_slots"]:
@@ -892,33 +877,6 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     # ════════════════════════════════════════
     # GET STARTED FLOW
     # ════════════════════════════════════════
-
-    # TURF: Handle webview booking (TURF_BOOK:0,1,2)
-    if text.startswith("turf_book:"):
-        try:
-            indices_str = text.replace("turf_book:", "")
-            if indices_str:
-                indices = [int(i.strip()) for i in indices_str.split(",") if i.strip().isdigit()]
-                for idx in indices:
-                    if idx < len(TURF_SLOTS):
-                        slot = TURF_SLOTS[idx]
-                        if slot not in session["turf_slots"]:
-                            session["turf_slots"].append(slot)
-            
-            session["state"] = "turf_review"
-            date_label = session["data"].get("date_label", "Selected Date")
-            slots_so_far = "\n".join(f"• {s}" for s in session["turf_slots"]) if session["turf_slots"] else "No slots selected."
-            await send_buttons(
-                phone,
-                f"✅ *Slots Updated!*\n\n📅 Date: {date_label}\n⏰ Selected:\n{slots_so_far}\n\nWhat would you like to do?",
-                [
-                    {"id": "turf_confirm_booking", "title": "✅ Confirm Booking"},
-                    {"id": "turf_edit_booking", "title": "✏️ Edit Booking"},
-                ]
-            )
-            return
-        except Exception as e:
-            print(f"[TURF WEB BOOK ERR] {e}")
 
     if state == "gs_name":
         if msg_body and msg_body.strip():
