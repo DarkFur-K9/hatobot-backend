@@ -17,6 +17,24 @@ ADMIN_NUMBER    = os.getenv("ADMIN_NUMBER", "6369189024")
 CART_BASE_URL   = os.getenv("CART_BASE_URL", "https://landingpagebackend-opal.vercel.app")
 API_URL         = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
 
+# ─── Persistent Booking Store ───
+BOOKINGS_FILE = "bookings.json"
+
+def load_bookings():
+    if os.path.exists(BOOKINGS_FILE):
+        try:
+            with open(BOOKINGS_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_bookings(bookings):
+    with open(BOOKINGS_FILE, "w") as f:
+        json.dump(bookings, f, indent=2)
+
+BOOKINGS = load_bookings()  # { "YYYY-MM-DD": { "slot_index": {"phone": "...", "name": "..."} } }
+
 # ─── In-memory session store ───
 sessions: dict = {}
 
@@ -188,24 +206,29 @@ def build_menu_sections() -> list:
         for cat, items in cats.items()
     ]
 
-def build_slot_sections(date_label: str, selected_slots: list = None) -> list:
+def build_slot_sections(date_iso: str, selected_slots: list = None) -> list:
     selected_slots = selected_slots or []
     morning = [s for s in TURF_SLOTS if "AM" in s]
     evening = [s for s in TURF_SLOTS if "PM" in s]
     
-    def get_desc(s):
+    # Get bookings for this date
+    date_bookings = BOOKINGS.get(date_iso, {})
+
+    def get_desc(s, idx):
+        if str(idx) in date_bookings:
+            return "❌ Already Booked"
         if s in selected_slots:
-            return "📌 Selected (Already in list)"
-        return f"₹{TURF_PRICE_PER_SLOT} • {date_label}"
+            return "📌 Selected (In your list)"
+        return f"₹{TURF_PRICE_PER_SLOT}"
 
     return [
         {
             "title": "🌅 Morning Slots",
-            "rows": [{"id": f"slot_{i}", "title": s, "description": get_desc(s)} for i, s in enumerate(morning)]
+            "rows": [{"id": f"slot_{i}", "title": s, "description": get_desc(s, i)} for i, s in enumerate(morning)]
         },
         {
             "title": "🌆 Evening Slots",
-            "rows": [{"id": f"slot_{i+len(morning)}", "title": s, "description": get_desc(s)} for i, s in enumerate(evening)]
+            "rows": [{"id": f"slot_{i+len(morning)}", "title": s, "description": get_desc(s, i+len(morning))} for i, s in enumerate(evening)]
         }
     ]
 
@@ -368,14 +391,8 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
             return
         if effective_raw == "turf_demo":
-            session["state"] = "turf_date"
-            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nFirst, select your preferred *date* 📅")
-            await send_list(
-                phone,
-                "Choose a date for your turf booking:",
-                "📅 Select Date",
-                [{"title": "Available Dates", "rows": get_next_7_days()}]
-            )
+            session["state"] = "turf_name"
+            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nWhat is your *name*? 👤")
             return
 
     # ════════════════════════════
@@ -397,9 +414,8 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 ]
             )
         elif hint == "turf":
-            session["state"] = "turf_date"
-            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nFirst, select your preferred *date* 📅")
-            await send_list(phone, "Choose a date:", "📅 Select Date", [{"title": "Available Dates", "rows": get_next_7_days()}])
+            session["state"] = "turf_name"
+            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nWhat is your *name*? 👤")
         else:
             await send_main_menu(phone, session)
         return
@@ -437,9 +453,8 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 ]
             )
         elif raw == "turf_demo":
-            session["state"] = "turf_date"
-            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nFirst, select your preferred *date* 📅")
-            await send_list(phone, "Choose a date:", "📅 Select Date", [{"title": "Available Dates", "rows": get_next_7_days()}])
+            session["state"] = "turf_name"
+            await send_text(phone, "⚽ *Welcome to Hatobot Turf Booking!*\n\nWhat is your *name*? 👤")
         elif raw == "get_started":
             session["state"] = "gs_name"
             await send_text(phone, "🚀 *Let's get you started with HatoBot!*\n\nWhat is your *name*? 👤")
@@ -672,6 +687,22 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     # TURF FLOW
     # ════════════════════════════════════════
 
+    # TURF: Name collection
+    if state == "turf_name":
+        if msg_body and msg_body.strip():
+            session["data"]["name"] = msg_body.strip()
+            session["state"] = "turf_date"
+            await send_text(phone, f"Thanks, *{session['data']['name']}!* 🙏")
+            await send_list(
+                phone,
+                "Choose a date for your turf booking:",
+                "📅 Select Date",
+                [{"title": "Available Dates", "rows": get_next_7_days()}]
+            )
+        else:
+            await send_text(phone, "Please tell us your *name* to continue 👤")
+        return
+
     # TURF: Date selection
     if state == "turf_date":
         if btn_id.startswith("date_"):
@@ -686,7 +717,7 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                 phone,
                 f"📅 *Date:* {date_label}\n\nNow choose your *time slot:*",
                 "⏰ Select Slot",
-                build_slot_sections(date_label, session.get("turf_slots", []))
+                build_slot_sections(date_val, session.get("turf_slots", []))
             )
         else:
             await send_list(
@@ -720,12 +751,13 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
                     ]
                 )
         else:
+            date_val = session["data"].get("date", "")
             date_label = session["data"].get("date_label", "Selected Date")
             await send_list(
                 phone,
                 "Please select a time slot:",
                 "⏰ Select Slot",
-                build_slot_sections(date_label, session.get("turf_slots", []))
+                build_slot_sections(date_val, session.get("turf_slots", []))
             )
         return
 
@@ -746,12 +778,13 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
             )
         elif raw == "turf_add_slot":
             session["state"] = "turf_slot"
+            date_val = session["data"].get("date", "")
             date_label = session["data"].get("date_label", "Selected Date")
             await send_list(
                 phone,
                 f"📅 {date_label} — Select another time slot:",
                 "⏰ Select Slot",
-                build_slot_sections(date_label, session.get("turf_slots", []))
+                build_slot_sections(date_val, session.get("turf_slots", []))
             )
         elif raw == "turf_remove_slot":
             if not session["turf_slots"]:
@@ -772,12 +805,13 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
     if state == "turf_edit":
         if raw == "turf_add_slot":
             session["state"] = "turf_slot"
+            date_val = session["data"].get("date", "")
             date_label = session["data"].get("date_label", "Selected Date")
             await send_list(
                 phone,
                 f"📅 {date_label} — Select another time slot:",
                 "⏰ Select Slot",
-                build_slot_sections(date_label, session.get("turf_slots", []))
+                build_slot_sections(date_val, session.get("turf_slots", []))
             )
         elif raw == "turf_remove_slot":
             if not session["turf_slots"]:
@@ -835,31 +869,66 @@ async def handle_incoming(phone: str, msg_type: str, msg_body: str, interactive_
         date_label = session["data"].get("date_label", "")
         slots = session["turf_slots"]
         if raw == "turf_pay_now":
+            # ── Record Booking ──
+            date_val = session["data"].get("date")
+            name = session["data"].get("name", "Unknown")
+            if date_val not in BOOKINGS: BOOKINGS[date_val] = {}
+            
+            # Final check - ensure they aren't booked while user was paying
+            conflicts = [s for s in slots if str(TURF_SLOTS.index(s)) in BOOKINGS[date_val]]
+            if conflicts:
+                await send_text(phone, f"⚠️ Sorry, some slots were just booked by someone else: {', '.join(conflicts)}. Please try other slots.")
+                session["state"] = "turf_slot"
+                return
+
+            for s in slots:
+                idx = TURF_SLOTS.index(s)
+                BOOKINGS[date_val][str(idx)] = {"phone": phone, "name": name}
+            save_bookings(BOOKINGS)
+
             slots_str = ", ".join(slots)
             await send_text(
                 phone,
                 f"✅ *Payment Successful!*\n"
                 f"Booking confirmed 🎉\n\n"
+                f"👤 Name: {name}\n"
                 f"📅 Date: {date_label}\n"
                 f"⏰ Slots: {slots_str}\n"
                 f"💰 Paid: ₹0 (Demo Offer)\n\n"
                 f"📋 Your booking will appear in the dashboard automatically!\n"
                 f"🏆 Thank you for booking with *Hatobot Turf!*"
             )
-            await notify_demo_complete(phone, "⚽ Turf Demo", f"Date: {date_label} | Slots: {slots_str}")
+            await notify_demo_complete(phone, "⚽ Turf Demo", f"Name: {name} | Date: {date_label} | Slots: {slots_str}")
             reset_session(phone)
             await send_return_cta(phone)
         elif raw == "turf_pay_counter":
+            # ── Record Booking ──
+            date_val = session["data"].get("date")
+            name = session["data"].get("name", "Unknown")
+            if date_val not in BOOKINGS: BOOKINGS[date_val] = {}
+            
+            conflicts = [s for s in slots if str(TURF_SLOTS.index(s)) in BOOKINGS[date_val]]
+            if conflicts:
+                await send_text(phone, f"⚠️ Sorry, some slots were just booked by someone else: {', '.join(conflicts)}. Please try other slots.")
+                session["state"] = "turf_slot"
+                return
+
+            for s in slots:
+                idx = TURF_SLOTS.index(s)
+                BOOKINGS[date_val][str(idx)] = {"phone": phone, "name": name}
+            save_bookings(BOOKINGS)
+
             slots_str = ", ".join(slots)
             await send_text(
                 phone,
                 f"✅ *Booking Confirmed!*\n"
                 f"Pay at venue.\n\n"
+                f"👤 Name: {name}\n"
                 f"📅 Date: {date_label}\n"
                 f"⏰ Slots: {slots_str}\n\n"
                 f"🏆 See you on the turf! *Hatobot Turf!*"
             )
-            await notify_demo_complete(phone, "⚽ Turf Demo", f"Date: {date_label} | Slots: {slots_str} | Pay at venue")
+            await notify_demo_complete(phone, "⚽ Turf Demo", f"Name: {name} | Date: {date_label} | Slots: {slots_str} | Pay at venue")
             reset_session(phone)
             await send_return_cta(phone)
         else:
@@ -1096,6 +1165,42 @@ async def serve_cart():
     cart_path = os.path.join(os.path.dirname(__file__), "cart.html")
     return FileResponse(cart_path, media_type="text/html")
 
+
+@app.get("/api/turf/availability")
+async def get_turf_availability(date: str):
+    """Returns booked slot IDs for a given date (YYYY-MM-DD)."""
+    return BOOKINGS.get(date, {})
+
+@app.post("/api/turf/book")
+async def book_turf(request: Request):
+    """Book slots from frontend."""
+    data = await request.json()
+    date_val = data.get("date")
+    slot_ids = data.get("slots") # list of indices as strings or ints
+    name = data.get("name")
+    phone = data.get("phone")
+
+    if not all([date_val, slot_ids, name, phone]):
+        return JSONResponse({"error": "Missing fields"}, status_code=400)
+
+    if date_val not in BOOKINGS:
+        BOOKINGS[date_val] = {}
+
+    # Check for conflicts
+    conflicts = [sid for sid in slot_ids if str(sid) in BOOKINGS[date_val]]
+    if conflicts:
+        return JSONResponse({"error": "Some slots already booked", "conflicts": conflicts}, status_code=409)
+
+    # Book them
+    for sid in slot_ids:
+        BOOKINGS[date_val][str(sid)] = {"phone": phone, "name": name}
+    
+    save_bookings(BOOKINGS)
+    
+    details = f"Frontend Booking | Name: {name} | Phone: {phone} | Slots: {slot_ids}"
+    await notify_demo_complete(phone, "⚽ Turf Demo (Frontend)", details)
+    
+    return {"status": "success"}
 
 @app.get("/health")
 async def health():
